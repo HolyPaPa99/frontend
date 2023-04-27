@@ -460,10 +460,6 @@ npm stop
 
 
 
-
-
-
-
 ### 2.4 依赖配置
 
 #### dependencies
@@ -480,22 +476,144 @@ npm stop
 
 这里每一项配置都是一个键值对（key-value）， key 表示模块名称，value 表示模块的版本号。版本号遵循**「主版本号. 次版本号. 修订号」**的格式规定：
 
-- **「固定版本:」** 上面的 react-scripts 的版本 4.0.3 就是固定版本，安装时只安装这个指定的版本；
-- **「波浪号:」** 比如~ 4.0.3，表示安装 4.0.x 的最新版本（不低于 4.0.3），也就是说安装时不会改变主版本号和次版本号；
-- **「插入号:」** 比如上面 react 的版本 ^17.0.2，表示安装 17.x.x 的最新版本（不低于 17.0.2），也就是说安装时不会改变主版本号。如果主版本号为 0，那么插入号和波浪号的行为是一致的；
-- latest：安装最新的版本。
+- **version** 上面的 react-scripts 的版本 4.0.3 就是固定版本，安装时只安装这个指定的版本；
+
+- **`>version`** 大于特定版本
+
+- **`>=version`** 大于等于特定版本
+
+- **`<version`** 小于特定版本
+
+- **`<=version`** 小于等于特定版本
+
+- **~version** 比如~ 4.0.3，表示安装 4.0.x 的最新版本（不低于 4.0.3），也就是说安装时不会改变主版本号和次版本号；
+
+- **^version:** 比如上面 react 的版本 ^17.0.2，表示安装 17.x.x 的最新版本（不低于 17.0.2），也就是说安装时不会改变主版本号。如果主版本号为 0，那么插入号和波浪号的行为是一致的；
+
+- **latest** 安装最新的版本。
+
+- **http://...**  压缩包下载URL地址
+
+- **\*** 任意版本
+
+- **git...** git仓库地址
+
+  ```html
+  <protocol>://[<user>[:<password>]@]<hostname>[:<port>][:][/]<path>[#<commit-ish> | #semver:<semver>]
+  ```
+
+  ```json
+  git+ssh://git@github.com:npm/cli.git#v1.0.27
+  git+ssh://git@github.com:npm/cli#semver:^5.0
+  git+https://isaacs@github.com/npm/cli.git
+  git://github.com/npm/cli.git#v1.0.27
+  ```
+
+  
+
+- **user/repo** Github仓库地址
+
+  ```json
+  {
+    "name": "foo",
+    "version": "0.0.0",
+    "dependencies": {
+      "express": "expressjs/express",
+      "mocha": "mochajs/mocha#4727d357ea",
+      "module": "user/repo#feature\/branch"
+    }
+  }
+  ```
+
+  
+
+- **tag** 版本标签
+
+- **path/path/path** 本地项目包
+
+  ```json
+  {
+    "name": "baz",
+    "dependencies": {
+      "bar": "file:../foo/bar"
+    }
+  }
+  ```
 
 需要注意，不要把测试或者过渡性的依赖放在 dependencies，避免生产环境出现意外的问题。
 
+
+
 #### devDependencies
+
+开发依赖，项目开发环境需要用到而运行时不需要的依赖，用于辅助开发，通常包括项目工程化工具比如 webpack，vite，eslint 等。使用 `npm install xxx -D` 或者 `npm install xxx --save-dev` 时，会被自动插入到该字段中。
+
+```json
+"devDependencies": {
+  "webpack": "^5.69.0"
+}
+```
+
+
 
 #### peerDependencies
 
+同伴依赖，一种特殊的依赖，不会被自动安装，通常用于表示与另一个包的依赖与兼容性关系来警示使用者。
+
+比如我们安装 A，A 的正常使用依赖 **B@2.x** 版本，那么**B@2.x**就应该被列在 A 的 peerDependencies 下，表示“如果你使用我，那么你也需要安装 B，并且至少是 2.x 版本”。
+
+比如 React 组件库 Ant Design，它的 package.json 里 peerDependencies 为
+
+```json
+"peerDependencies": {
+  "react": ">=16.9.0",
+  "react-dom": ">=16.9.0"
+}
+```
+
+表示如果你使用 Ant Design，那么你的项目也应该安装 react 和 react-dom，并且版本需要大于等于 16.9.0。
+
+
+
 #### peerDependenciesMeta
+
+同伴依赖也可以使用 peerDependenciesMeta 将其指定为可选的。
+
+```json
+"peerDependencies": {
+  "colors": "^1.4.0"
+},
+"peerDependenciesMeta": {
+  "colors": {
+    "optional": true
+   }
+ }
+```
+
+
 
 #### bundleDependencies
 
+打包依赖。它的值是一个数组，在发布包时，bundleDependencies 里面的依赖都会被一起打包。
+
+比如指定 react 和 react-dom 为打包依赖：
+
+```json
+"bundleDependencies": [
+  "react",
+  "react-dom"
+]
+```
+
+
+
 #### optionalDependencies
+
+如果需要在找不到包或者安装包失败时，npm 仍然能够继续运行，则可以将该包放在 optionalDependencies 对象中，optionalDependencies 对象中的包会覆盖 dependencies 中同名的包，所以只需在一个地方进行设置即可。
+
+需要注意，由于 optionalDependencies 中的依赖可能并未安装成功，所以一定要做异常处理，否则当获取这个依赖时，如果获取不到就会报错。
+
+
 
 #### overrides
 
