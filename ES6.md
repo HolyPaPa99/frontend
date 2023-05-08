@@ -1370,24 +1370,674 @@ getJSON("/posts.json").then(function(json) {
 
 * `Promise.all()`
 
-  `Promise.all()`方法用于将多个 Promise 实例，包装成一个新的 Promise 实例。
+  `Promise.all()`方法用于将多个 Promise 实例，包装成一个新的 Promise 实例。`Promise.all()`方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 Promise 实例，如果不是，就会先调用`Promise.resolve`方法，将参数转为 Promise 实例，再进一步处理。
 
   ```js
+  const p = Promise.all([p1, p2, p3]);
+  ```
+
+  `p`的状态由`p1`、`p2`、`p3`决定，分成两种情况：
+
+  1. 只有`p1`、`p2`、`p3`的状态都变成`fulfilled`，`p`的状态才会变成`fulfilled`，此时`p1`、`p2`、`p3`的返回值组成一个数组，传递给`p`的回调函数。
+  2. 只要`p1`、`p2`、`p3`之中有一个被`rejected`，`p`的状态就变成`rejected`，此时第一个被`reject`的实例的返回值，会传递给`p`的回调函数。
+
+  注意，如果作为参数的 Promise 实例，自己定义了`catch`方法，那么它一旦被`rejected`，并不会触发`Promise.all()`的`catch`方法。
+
+  ```js
+  const p1 = new Promise((resolve, reject) => {
+    resolve('hello');
+  })
+  .then(result => result)
+  .catch(e => e);
+  const p2 = new Promise((resolve, reject) => {
+    throw new Error('报错了');
+  })
+  .then(result => result)
+  .catch(e => e);
+  Promise.all([p1, p2])
+  .then(result => console.log(result))
+  .catch(e => console.log(e));
+  // ["hello", Error: 报错了]
   ```
 
   
 
 * `Promise.race()`
 
+  `Promise.race()`方法同样是将多个 Promise 实例，包装成一个新的 Promise 实例。`Promise.race()`方法的参数与`Promise.all()`方法一样，如果不是 Promise 实例，就会先调用下面讲到的`Promise.resolve()`方法，将参数转为 Promise 实例，再进一步处理。
+
+  ```js
+  const p = Promise.race([p1, p2, p3]);
+  ```
+
+  只要`p1`、`p2`、`p3`之中有一个实例率先改变状态，`p`的状态就跟着改变。那个率先改变的 Promise 实例的返回值，就传递给`p`的回调函数。
+
+  ```js
+  //如果指定时间5s内没有获得结果，就将 Promise 的状态变为reject，否则变为resolve。
+  const p = Promise.race([
+    fetch('/resource-that-may-take-a-while'),
+    new Promise(function (resolve, reject) {
+      setTimeout(() => reject(new Error('request timeout')), 5000)
+    })
+  ]);
+  p
+  .then(console.log)
+  .catch(console.error);
+  ```
+
   
 
 * `Promise.allSettled()`
+
+  `Promise.allSettled()`方法接受一组 Promise 实例作为参数，包装成一个新的 Promise 实例。只有等到所有这些参数实例都返回结果，不管是`fulfilled`还是`rejected`，包装实例才会结束。该方法由ES2020 引入。该方法返回的新的 Promise 实例，一旦结束，状态总是`fulfilled`，不会变成`rejected`。状态变成`fulfilled`后，Promise 的监听函数接收到的参数是一个数组，每个成员对应一个传入`Promise.allSettled()`的 Promise 实例。
+
+  ```js
+  const resolved = Promise.resolve(42);
+  const rejected = Promise.reject(-1);
+  const allSettledPromise = Promise.allSettled([resolved, rejected]);
+  allSettledPromise.then(function (results) {
+    console.log(results);
+  });
+  // [
+  //    { status: 'fulfilled', value: 42 },
+  //    { status: 'rejected', reason: -1 }
+  // ]
+  ```
+
+  有时候，我们不关心异步操作的结果，只关心这些操作有没有结束。这时，`Promise.allSettled()`方法就很有用。如果没有这个方法，想要确保所有操作都结束，就很麻烦。`Promise.all()`方法无法做到这一点。
 
   
 
 * `Promise.any()`
 
+  `Promise.any()`方法接受一组 Promise 实例作为参数，包装成一个新的 Promise 实例。只要参数实例有一个变成`fulfilled`状态，包装实例就会变成`fulfilled`状态；如果所有参数实例都变成`rejected`状态，包装实例就会变成`rejected`状态。该方法目前是一个第三阶段的提案 。`Promise.any()`跟`Promise.race()`方法很像，只有一点不同，就是不会因为某个 Promise 变成`rejected`状态而结束。
+
+  ```js
+  Promise.any(promises).then(
+    (first) => {
+      // Any of the promises was fulfilled.
+    },
+    (error) => {
+      // All of the promises were rejected.
+    }
+  );
+  ```
+
   
+
+## 十三、Iterator接口
+
+JavaScript 原有的表示“集合”的数据结构，主要是数组（`Array`）和对象（`Object`），ES6 又添加了`Map`和`Set`。这样就需要一种统一的接口机制，来处理所有不同的数据结构。遍历器（Iterator）就是这样一种机制。它是一种接口，为各种不同的数据结构提供统一的访问机制。任何数据结构只要部署 Iterator 接口，就可以完成遍历操作（即依次处理该数据结构的所有成员）。
+
+模拟Iterator：
+
+```js
+function makeIterator(array) {
+  var nextIndex = 0;
+  return {
+    next: function() {
+      return nextIndex < array.length ?
+        {value: array[nextIndex++]} :
+        {done: true};
+    }
+  };
+}
+```
+
+ES6 规定，默认的 Iterator 接口部署在数据结构的`Symbol.iterator`属性，或者说，一个数据结构只要具有`Symbol.iterator`属性，就可以认为是“可遍历的”（iterable）。`Symbol.iterator`属性本身是一个函数，就是当前数据结构默认的遍历器生成函数。执行这个函数，就会返回一个遍历器。至于属性名`Symbol.iterator`，它是一个表达式，返回`Symbol`对象的`iterator`属性，这是一个预定义好的、类型为 Symbol 的特殊值，所以要放在方括号内。
+
+```js
+const obj = {
+  [Symbol.iterator] : function () {
+    return {
+      next: function () {
+        return {
+          value: 1,
+          done: true
+        };
+      }
+    };
+  }
+};
+```
+
+ES6 的有些数据结构原生具备 Iterator 接口（比如数组），即不用任何处理，就可以被`for...of`循环遍历。原生具备 Iterator 接口的数据结构如下:
+
+- Array
+
+  ```js
+  let arr = ['a', 'b', 'c'];
+  let iter = arr[Symbol.iterator]();
+  iter.next() // { value: 'a', done: false }
+  iter.next() // { value: 'b', done: false }
+  iter.next() // { value: 'c', done: false }
+  iter.next() // { value: undefined, done: true }
+  ```
+
+  
+
+- Map
+
+- Set
+
+- String
+
+  ```js
+  var someString = "hi";
+  typeof someString[Symbol.iterator]
+  // "function"
+  var iterator = someString[Symbol.iterator]();
+  iterator.next()  // { value: "h", done: false }
+  iterator.next()  // { value: "i", done: false }
+  iterator.next()  // { value: undefined, done: true }
+  ```
+
+  
+
+- TypedArray
+
+- 函数的 arguments 对象
+
+- NodeList 对象
+
+
+
+**`for ... in` 和 `for ... of` 的区别：`for...in`循环读取键名，`for...of`循环读取键值。**
+
+
+
+## 十四、Generator
+
+### 1.语法及应用场景介绍
+
+Generator 函数是 ES6 提供的一种异步编程解决方案，语法行为与传统函数完全不同。
+
+* 语法上，首先可以把它理解成，Generator 函数是一个状态机，封装了多个内部状态。
+
+  执行 Generator 函数会返回一个遍历器对象，也就是说，Generator 函数除了状态机，还是一个遍历器对象生成函数。返回的遍历器对象，可以依次遍历 Generator 函数内部的每一个状态。
+
+* 形式上，Generator 函数是一个普通函数，但是有两个特征。
+
+  一是，`function`关键字与函数名之间有一个星号`*`；
+
+  二是，函数体内部使用`yield`表达式，定义不同的内部状态（`yield`在英语里的意思就是“产出”）。
+
+```js
+function* helloWorldGenerator() {
+    yield 'hello';
+    yield 'world';
+  }
+  let hw = helloWorldGenerator();
+  for( let output of hw){
+    console.log(output)
+  }
+//hello
+//world
+```
+
+由于 Generator 函数返回的遍历器对象，只有调用`next`方法才会遍历下一个内部状态，所以其实提供了一种可以暂停执行的函数。`yield`表达式就是暂停标志。遍历器对象的`next`方法的运行逻辑如下:
+
+* 遇到`yield`表达式，就暂停执行后面的操作，并将紧跟在`yield`后面的那个表达式的值，作为返回的对象的`value`属性值。
+* 下一次调用`next`方法时，再继续往下执行，直到遇到下一个`yield`表达式。
+* 如果没有再遇到新的`yield`表达式，就一直运行到函数结束，直到`return`语句为止，并将`return`语句后面的表达式的值，作为返回的对象的`value`属性值。
+* 如果该函数没有`return`语句，则返回的对象的`value`属性值为`undefined`。
+
+`yield`表达式需要注意的地方：
+
+* `yield`表达式只能用在 Generator 函数里面，用在其他地方都会报错。
+
+* `yield`表达式如果用在另一个表达式之中，必须放在圆括号里面。
+
+  ```js
+  function* demo() {
+    console.log('Hello' + yield); // SyntaxError
+    console.log('Hello' + yield 123); // SyntaxError
+    console.log('Hello' + (yield)); // OK
+    console.log('Hello' + (yield 123)); // OK
+  }
+  ```
+
+  
+
+* `yield`表达式用作函数参数或放在赋值表达式的右边，可以不加括号。
+
+  ```js
+  function* demo() {
+    foo(yield 'a', yield 'b'); // OK
+    let input = yield; // OK
+  }
+  ```
+
+  
+
+应用场景：
+
+* 异步操作的同步化
+
+  ```js
+  function* loadUI() {
+    showLoadingScreen();
+    yield loadUIDataAsynchronously();
+    hideLoadingScreen();
+  }
+  var loader = loadUI();
+  // 加载UI
+  loader.next()
+  // 卸载UI
+  loader.next()
+  ```
+
+  
+
+* 控制流管理
+
+  ```js
+  function* longRunningTask(value1) {
+    try {
+      var value2 = yield step1(value1);
+      var value3 = yield step2(value2);
+      var value4 = yield step3(value3);
+      var value5 = yield step4(value4);
+      // Do something with value4
+    } catch (e) {
+      // Handle any error from step1 through step4
+    }
+  }
+  ```
+
+  ```js
+  let jobs = [job1, job2, job3];
+  function* iterateJobs(jobs){
+    for (var i=0; i< jobs.length; i++){
+      var job = jobs[i];
+      yield* iterateSteps(job.steps);
+    }
+  }
+  for (var step of iterateJobs(jobs)){
+    console.log(step.id);
+  }
+  ```
+
+  
+
+* 部署 Iterator 接口
+
+  ```js
+  function* iterEntries(obj) {
+    let keys = Object.keys(obj);
+    for (let i=0; i < keys.length; i++) {
+      let key = keys[i];
+      yield [key, obj[key]];
+    }
+  }
+  let myObj = { foo: 3, bar: 7 };
+  for (let [key, value] of iterEntries(myObj)) {
+    console.log(key, value);
+  }
+  // foo 3
+  // bar 7
+  ```
+
+  
+
+* 作为数组数据结构
+
+  ```js
+  function* doStuff() {
+    yield fs.readFile.bind(null, 'hello.txt');
+    yield fs.readFile.bind(null, 'world.txt');
+    yield fs.readFile.bind(null, 'and-such.txt');
+  }
+  for (task of doStuff()) {
+    // task是一个函数，可以像回调函数那样使用它
+  }
+  ```
+
+
+
+### 2.next的参数
+
+**`yield`表达式本身没有返回值，或者说总是返回`undefined`。`next`方法可以带一个参数，该参数就会被当作上一个`yield`表达式的返回值。**
+
+```js
+function* f() {
+  for(var i = 0; true; i++) {
+    var reset = yield i;
+    if(reset) { i = -1; }
+  }
+}
+var g = f();
+g.next() // { value: 0, done: false }
+g.next() // { value: 1, done: false }
+g.next(true) // { value: 0, done: false }
+```
+
+Generator 函数从暂停状态到恢复运行，它的上下文状态（context）是不变的。通过`next`方法的参数，就有办法在 Generator 函数开始运行之后，继续向函数体内部注入值。也就是说，可以在 Generator 函数运行的不同阶段，从外部向内部注入不同的值，从而调整函数行为。
+
+```js
+function* foo(x) {
+  var y = 2 * (yield (x + 1));
+  var z = yield (y / 3);
+  return (x + y + z);
+}
+var a = foo(5);
+a.next() // Object{value:6, done:false}
+a.next() // Object{value:NaN, done:false}
+a.next() // Object{value:NaN, done:true}
+var b = foo(5);
+b.next() // { value:6, done:false }
+b.next(12) // { value:8, done:false }
+b.next(13) // { value:42, done:true }
+```
+
+
+
+### 3.Generator.prototype.throw()
+
+Generator 函数返回的遍历器对象，都有一个`throw`方法，可以在函数体外抛出错误，然后在 Generator 函数体内捕获。
+
+* `throw`方法抛出的错误要被内部捕获，前提是必须至少执行过一次`next`方法。
+* `throw`方法可以接受一个参数，该参数会被`catch`语句接收，建议抛出`Error`对象的实例。
+* 如果 Generator 函数内部没有部署`try...catch`代码块，那么`throw`方法抛出的错误，将被外部`try...catch`代码块捕获。
+* `throw`方法被捕获以后，会附带执行下一条`yield`表达式。也就是说，会附带执行一次`next`方法。
+* 一旦 Generator 执行过程中抛出错误，且没有被内部捕获，就不会再执行下去了。如果此后还调用`next`方法，将返回一个`value`属性等于`undefined`、`done`属性等于`true`的对象，即 JavaScript 引擎认为这个 Generator 已经运行结束了。
+
+```js
+var gen = function* gen(){
+  try {
+    yield console.log('a');
+  } catch (e) {
+    // ...
+  }
+  yield console.log('b');
+  yield console.log('c');
+}
+var g = gen();
+g.next() // a
+g.throw() // b
+g.next() // c
+```
+
+### 4.Generator.prototype.return()
+
+Generator 函数返回的遍历器对象，还有一个`return`方法，可以返回给定的值，并且终结遍历 Generator 函数。
+
+* 如果`return`方法调用时，不提供参数，则返回值的`value`属性为`undefined`。
+* 如果 Generator 函数内部有`try...finally`代码块，且正在执行`try`代码块，那么`return`方法会导致立刻进入`finally`代码块，执行完以后，整个函数才会结束。
+
+```js
+function* gen() {
+  yield 1;
+  yield 2;
+  yield 3;
+}
+var g = gen();
+g.next()        // { value: 1, done: false }
+g.return('foo') // { value: "foo", done: true }
+g.next()        // { value: undefined, done: true }
+```
+
+
+
+```js
+function* numbers () {
+  yield 1;
+  try {
+    yield 2;
+    yield 3;
+  } finally {
+    yield 4;
+    yield 5;
+  }
+  yield 6;
+}
+var g = numbers();
+g.next() // { value: 1, done: false }
+g.next() // { value: 2, done: false }
+g.return(7) // { value: 4, done: false }
+g.next() // { value: 5, done: false }
+g.next() // { value: 7, done: true }
+```
+
+
+
+### 5.`yield*`表达式
+
+ES6 提供了`yield*`表达式，用来在一个 Generator 函数里面执行另一个 Generator 函数。
+
+```js
+let delegatedIterator = (function* () {
+  yield 'Hello!';
+  yield 'Bye!';
+}());
+let delegatingIterator = (function* () {
+  yield 'Greetings!';
+  yield* delegatedIterator;
+  yield 'Ok, bye.';
+}());
+for(let value of delegatingIterator) {
+  console.log(value);
+}
+// "Greetings!
+// "Hello!"
+// "Bye!"
+// "Ok, bye."
+```
+
+实际上，任何数据结构只要有 Iterator 接口，就可以被`yield*`遍历。
+
+### 6.作为对象属性的Generator
+
+如果一个对象的属性是 Generator 函数，可以简写成下面的形式。
+
+```js
+let obj = {
+  * myGeneratorMethod() {
+    ···
+  }
+};
+
+//等同于
+let obj = {
+  myGeneratorMethod: function* () {
+    // ···
+  }
+};
+```
+
+### 7.Generator中的this
+
+Generator 函数总是返回一个遍历器，ES6 规定这个遍历器是 Generator 函数的实例，也继承了 Generator 函数的`prototype`对象上的方法。Generator 函数也不能跟`new`命令一起用，会报错。使用`call`方法绑定 Generator 函数内部的`this`：
+
+```js
+function* F() {
+  this.a = 1;
+  yield this.b = 2;
+  yield this.c = 3;
+}
+//首先，生成一个空对象，使用call方法绑定 Generator 函数内部的this。这样，构造函数调用以后，这个空对象就是 Generator 函数的实例对象了。
+var obj = {};
+var f = F.call(obj);
+f.next();  // Object {value: 2, done: false}
+f.next();  // Object {value: 3, done: false}
+f.next();  // Object {value: undefined, done: true}
+obj.a // 1
+obj.b // 2
+obj.c // 3
+```
+
+再将`F`改成构造函数，就可以对它执行`new`命令了。
+
+```js
+function* gen() {
+  this.a = 1;
+  yield this.b = 2;
+  yield this.c = 3;
+}
+function F() {
+  return gen.call(gen.prototype);
+}
+var f = new F();
+f.next();  // Object {value: 2, done: false}
+f.next();  // Object {value: 3, done: false}
+f.next();  // Object {value: undefined, done: true}
+f.a // 1
+f.b // 2
+f.c // 3
+```
+
+
+
+### 8.异步编程
+
+ES6 诞生以前，异步编程的方法，大概有下面四种。
+
+- 回调函数
+- 事件监听
+- 发布/订阅
+- Promise 对象
+
+Generator 函数将 JavaScript 异步编程带入了一个全新的阶段。
+
+Generator 函数是协程在 ES6 的实现，最大特点就是可以交出函数的执行权（即暂停执行）。整个 Generator 函数就是一个封装的异步任务，或者说是异步任务的容器。异步操作需要暂停的地方，都用`yield`语句注明。
+
+```js
+var fetch = require('node-fetch');
+function* gen(){
+  var url = 'https://api.github.com/users/github';
+  var result = yield fetch(url);
+  console.log(result.bio);
+}
+var g = gen();
+var result = g.next();
+result.value.then(function(data){
+  return data.json();
+}).then(function(data){
+  g.next(data);
+});
+```
+
+上面代码中，首先执行 Generator 函数，获取遍历器对象，然后使用`next`方法（第二行），执行异步任务的第一阶段。由于`Fetch`模块返回的是一个 Promise 对象，因此要用`then`方法调用下一个`next`方法。
+
+### 9.Thunk函数与Generator自动执行
+
+Thunk函数是"传名调用"的一种实现策略。将表达式参数放到一个临时函数之中，再将这个临时函数传入函数体。这个临时函数就叫做 Thunk 函数。
+
+```js
+// ES6版本
+const Thunk = function(fn) {
+  return function (...args) {
+    return function (callback) {
+      return fn.call(this, ...args, callback);
+    }
+  };
+};
+
+function f(a, cb) {
+  cb(a);
+}
+const ft = Thunk(f);
+ft(1)(console.log) // 1
+```
+
+Thunk 函数真正的威力，在于可以自动执行 Generator 函数。下面就是一个基于 Thunk 函数的 Generator 执行器。
+
+```js
+//自动执行器
+let run = (fn) => {
+    let gen = fn();
+    let next = () => {
+        let result = gen.next();
+        if (result.done) return;
+        result.value();
+        next();
+    }
+    next();
+}
+//thunk函数转换器
+function toThunk(fn) {
+    return (...args) => {
+        return (callback) => {
+            fn.call(this, ...args, callback);
+        };
+    };
+}
+//回调函数
+let callback = (data) => {
+    console.log(data)
+}
+//Generator
+let g = function* () {
+    yield toThunk(callback)(1);
+    yield toThunk(callback)(2);
+    yield toThunk(callback)(3);
+}
+
+run(g);
+```
+
+### 10.`co`模块
+
+[co 模块](https://github.com/tj/co)是著名程序员 TJ Holowaychuk 于 2013 年 6 月发布的一个小工具，用于 Generator 函数的自动执行。
+
+co 模块可以让你不用编写 Generator 函数的执行器。`co`函数返回一个`Promise`对象，因此可以用`then`方法添加回调函数。
+
+```js
+var gen = function* () {
+  var f1 = yield readFile('/etc/fstab');
+  var f2 = yield readFile('/etc/shells');
+  console.log(f1.toString());
+  console.log(f2.toString());
+};
+var co = require('co');
+co(gen).then(function (){
+  console.log('Generator 函数执行完成');
+});
+
+```
+
+co 支持并发的异步操作，即允许某些操作同时进行，等到它们全部完成，才进行下一步。这时，要把并发的操作都放在数组或对象里面，跟在`yield`语句后面。
+
+```js
+const co = require('co')
+let onerror = (error)=>{
+  console.log(error)
+}
+// 数组的写法
+co(function* () {
+  var res = yield [
+    Promise.resolve(1),
+    Promise.resolve(2)
+  ];
+  console.log(res);
+}).catch(onerror);
+// 对象的写法
+co(function* () {
+  var res = yield {
+    1: Promise.resolve(1),
+    2: Promise.resolve(2),
+  };
+  console.log(res);
+}).catch(onerror);
+```
+
+
+
+## 十五、async函数
+
+
+
+
+
+
+
+## 十六、Class（类）
+
+
+
+
+
+## 十七、模块
 
 
 
