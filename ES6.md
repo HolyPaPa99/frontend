@@ -2710,25 +2710,291 @@ class DistributedEdit extends mix(Loggable, Serializable) {
 
 
 
-
-
 ## 十七、模块
 
+在 ES6 之前，社区制定了一些模块加载方案，最主要的有 CommonJS 和 AMD 两种。前者用于服务器，后者用于浏览器。ES6 在语言标准的层面上，实现了模块功能，而且实现得相当简单，完全可以取代 CommonJS 和 AMD 规范，成为浏览器和服务器通用的模块解决方案。ES6 模块的设计思想是尽量的静态化，使得编译时就能确定模块的依赖关系，以及输入和输出的变量。ES6 模块不是对象，而是通过`export`命令显式指定输出的代码，再通过`import`命令输入。
+
+```js
+// ES6模块
+import { stat, exists, readFile } from 'fs';
+```
+
+### 1.`export`
+
+`export`命令用于规定模块的对外接口，一个模块就是一个独立的文件。该文件内部的所有变量，外部无法获取。如果你希望外部能够读取模块内部的某个变量，就必须使用`export`关键字输出该变量。
+
+```js
+// profile.js
+var firstName = 'Michael';
+var lastName = 'Jackson';
+var year = 1958;
+export { firstName, lastName, year };
+```
+
+`export`命令除了输出变量，还可以输出函数或类（class）。`export`命令可以出现在模块的任何位置，只要处于模块顶层就可以。如果处于块级作用域内，就会报错。
 
 
 
+### 2.`import`
+
+`import`命令会被 JavaScript 引擎静态分析，先于模块内的其他语句执行（`import`命令叫做“连接” binding 其实更合适）。也就是说，`import`命令只能在模块的顶层，不能在代码块之中。
+
+```js
+// main.js
+import { firstName, lastName, year } from './profile.js';
+function setName(element) {
+  element.textContent = firstName + ' ' + lastName;
+}
+```
+
+如果想为输入的变量重新取一个名字，`import`命令要使用`as`关键字，将输入的变量重命名。
+
+```js
+import { lastName as surname } from './profile.js';
+```
+
+由于`import`是静态执行，所以不能使用表达式和变量，这些只有在运行时才能得到结果的语法结构。如果多次重复执行同一句`import`语句，那么只会执行一次，而不会执行多次。
+
+除了指定加载某个输出值，还可以使用整体加载，即用星号（`*`）指定一个对象，所有输出值都加载在这个对象上面。
+
+```js
+import * as circle from './circle';
+console.log('圆面积：' + circle.area(4));
+console.log('圆周长：' + circle.circumference(14));
+```
 
 
 
+### 3.`export default`
+
+使用`import`命令的时候，用户需要知道所要加载的变量名或函数名，否则无法加载。但是，用户肯定希望快速上手，未必愿意阅读文档，去了解模块有哪些属性和方法。
+
+为了给用户提供方便，让他们不用阅读文档就能加载模块，就要用到`export default`命令，为模块指定默认输出。使用`export default`时，对应的`import`语句不需要使用大括号；
+
+```js
+// export-default.js
+export default function () {
+  console.log('foo');
+}
+
+// import-default.js
+import customName from './export-default';
+customName(); // 'foo'
+```
+
+`export default`命令用在非匿名函数前，也是可以的。因为`export default`命令其实只是输出一个叫做`default`的变量，所以它后面不能跟变量声明语句。
+
+```js
+// 正确
+export var a = 1;
+// 正确
+var a = 1;
+export default a;
+// 错误
+export default var a = 1;
+```
+
+当然一个模块可以导出多个对外接口，导入模块时也可以同时导入默认接口和其他接口。
+
+```js
+//lodash模块导出
+export default function (obj) {
+  // ···
+}
+export function each(obj, iterator, context) {
+  // ···
+}
+export { each as forEach };
+
+//导入
+import _, {each, forEach} from 'lodash';
+```
 
 
 
+### 4.严格模式
+
+ES6 的模块自动采用严格模式，不管你有没有在模块头部加上`"use strict";`。
+
+严格模式主要有以下限制。
+
+- 变量必须声明后再使用
+- 函数的参数不能有同名属性，否则报错
+- 不能使用`with`语句
+- 不能对只读属性赋值，否则报错
+- 不能使用前缀 0 表示八进制数，否则报错
+- 不能删除不可删除的属性，否则报错
+- 不能删除变量`delete prop`，会报错，只能删除属性`delete global[prop]`
+- `eval`不会在它的外层作用域引入变量
+- `eval`和`arguments`不能被重新赋值
+- `arguments`不会自动反映函数参数的变化
+- 不能使用`arguments.callee`
+- 不能使用`arguments.caller`
+- 禁止`this`指向全局对象
+- 不能使用`fn.caller`和`fn.arguments`获取函数调用的堆栈
+- 增加了保留字（比如`protected`、`static`和`interface`）
+
+## 十八、装饰器Decorator
+
+装饰器是一种函数，写成`@ + 函数名`。它可以放在类和类方法的定义前面。
+
+```js
+function testable(isTestable) {
+  return function(target) {
+    target.isTestable = isTestable;
+  }
+}
+@testable(true)
+class MyTestableClass {}
+MyTestableClass.isTestable // true
+@testable(false)
+class MyClass {}
+MyClass.isTestable // false
+```
+
+如果觉得一个参数不够用，可以在装饰器外面再封装一层函数。
+
+```js
+// mixins.js
+export function mixins(...list) {
+  return function (target) {
+    Object.assign(target.prototype, ...list)
+  }
+}
+// main.js
+import { mixins } from './mixins'
+const Foo = {
+  foo() { console.log('foo') }
+};
+@mixins(Foo)
+class MyClass {}
+let obj = new MyClass();
+obj.foo() // 'foo'
+```
+
+实际开发中，React 与 Redux 库结合使用:
+
+```js
+@connect(mapStateToProps, mapDispatchToProps)
+export default class MyReactComponent extends React.Component {}
+```
+
+装饰器不仅可以装饰类，还可以装饰类的属性。
+
+```js
+function readonly(target, name, descriptor){
+  // descriptor对象原来的值如下
+  // {
+  //   value: specifiedFunction,
+  //   enumerable: false,
+  //   configurable: true,
+  //   writable: true
+  // };
+  descriptor.writable = false;
+  return descriptor;
+}
+readonly(Person.prototype, 'name', descriptor);
+// 类似于
+Object.defineProperty(Person.prototype, 'name', descriptor);
+
+class Person {
+  @readonly
+  name() { return `${this.first} ${this.last}` }
+}
+```
+
+```js
+class Person {
+  @nonenumerable
+  get kidCount() { return this.children.length; }
+}
+function nonenumerable(target, name, descriptor) {
+  descriptor.enumerable = false;
+  return descriptor;
+}
+```
+
+```js
+class Math {
+  @log
+  add(a, b) {
+    return a + b;
+  }
+}
+function log(target, name, descriptor) {
+  var oldValue = descriptor.value;
+  descriptor.value = function() {
+    console.log(`Calling ${name} with`, arguments);
+    return oldValue.apply(this, arguments);
+  };
+  return descriptor;
+}
+const math = new Math();
+// passed parameters should get logged now
+math.add(2, 4);
+```
+
+```js
+@Component({
+  tag: 'my-component',
+  styleUrl: 'my-component.scss'
+})
+export class MyComponent {
+  @Prop() first: string;
+  @Prop() last: string;
+  @State() isVisible: boolean = true;
+  render() {
+    return (
+      <p>Hello, my name is {this.first} {this.last}</p>
+    );
+  }
+}
+```
+
+如果同一个方法有多个装饰器，会像剥洋葱一样，先从外到内进入，然后由内向外执行。
+
+```js
+function dec(id){
+  console.log('evaluated', id);
+  return (target, property, descriptor) => console.log('executed', id);
+}
+class Example {
+    @dec(1)
+    @dec(2)
+    method(){}
+}
+// evaluated 1
+// evaluated 2
+// executed 2
+// executed 1
+```
 
 
 
+## 十九、ESLint
 
+ESLint 是一个语法规则和代码风格的检查工具，可以用来保证写出语法正确、风格统一的代码。
 
+首先，安装 ESLint。
 
+```shell
+$ npm i -g eslint
+```
+
+然后，安装 Airbnb 语法规则，以及 import、a11y、react 插件。
+
+```shell
+$ npm i -g eslint-config-airbnb
+$ npm i -g eslint-plugin-import eslint-plugin-jsx-a11y eslint-plugin-react
+```
+
+最后，在项目的根目录下新建一个`.eslintrc`文件，配置 ESLint。
+
+```js
+{  
+  "extends": "eslint-config-airbnb"
+}
+```
 
 
 
