@@ -2021,17 +2021,692 @@ co(function* () {
 }).catch(onerror);
 ```
 
-
+`co`模块约定，`yield`命令后面只能是 Thunk 函数或 Promise 对象。
 
 ## 十五、async函数
 
+ES2017 标准引入了 async 函数，使得异步操作变得更加方便。一句话，它就是 Generator 函数的语法糖。一比较就会发现，`async`函数就是将 Generator 函数的星号（`*`）替换成`async`，将`yield`替换成`await`，仅此而已。async 函数的实现原理，就是将 Generator 函数和自动执行器，包装在一个函数里。
+
+```js
+const gen = function* () {
+  const f1 = yield readFile('/etc/fstab');
+  const f2 = yield readFile('/etc/shells');
+  console.log(f1.toString());
+  console.log(f2.toString());
+};
+
+const asyncReadFile = async function () {
+  const f1 = await readFile('/etc/fstab');
+  const f2 = await readFile('/etc/shells');
+  console.log(f1.toString());
+  console.log(f2.toString());
+};
+```
+
+`async`函数对 Generator 函数的改进:
+
+* 内置执行器
+
+  Generator 函数的执行必须靠执行器，所以才有了`co`模块，而`async`函数自带执行器。也就是说，`async`函数的执行，与普通函数一模一样，只要一行。
+
+  ```js
+  asyncReadFile();
+  ```
+
+  
+
+* 更好的语义
+
+  `async`和`await`，比起星号和`yield`，语义更清楚了。`async`表示函数里有异步操作，`await`表示紧跟在后面的表达式需要等待结果。
+
+* 更广的适用性
+
+  `co`模块约定，`yield`命令后面只能是 Thunk 函数或 Promise 对象，而`async`函数的`await`命令后面，可以是 Promise 对象和原始类型的值（数值、字符串和布尔值，但这时会自动转成立即 resolved 的 Promise 对象）。
+
+* 返回值是 Promise
+
+  `async`函数的返回值是 Promise 对象，这比 Generator 函数的返回值是 Iterator 对象方便多了。你可以用`then`方法指定下一步的操作。
+
+### 1.async 函数的使用形式
+
+```js
+// 函数声明
+async function foo() {}
+// 函数表达式
+const foo = async function () {};
+// 对象的方法
+let obj = { async foo() {} };
+obj.foo().then(...)
+// Class 的方法
+class Storage {
+  constructor() {
+    this.cachePromise = caches.open('avatars');
+  }
+  async getAvatar(name) {
+    const cache = await this.cachePromise;
+    return cache.match(`/avatars/${name}.jpg`);
+  }
+}
+const storage = new Storage();
+storage.getAvatar('jake').then(…);
+// 箭头函数
+const foo = async () => {};
+```
+
+### 2.async函数的返回值
+
+`async`函数返回一个 Promise 对象。`async`函数内部`return`语句返回的值，会成为`then`方法回调函数的参数。`async`函数内部抛出错误，会导致返回的 Promise 对象变为`reject`状态。抛出的错误对象会被`catch`方法回调函数接收到。
+
+```js
+async function f() {
+  return 'hello world';
+}
+f().then(v => console.log(v))
+// "hello world"
+
+async function f() {
+  throw new Error('出错了');
+}
+f().then(
+  v => console.log(v),
+  e => console.log(e)
+)
+// Error: 出错了
+```
+
+### 3.await
+
+`async`函数返回的 Promise 对象，必须等到内部所有`await`命令后面的 Promise 对象执行完，才会发生状态改变，除非遇到`return`语句或者抛出错误。也就是说，只有`async`函数内部的异步操作执行完，才会执行`then`方法指定的回调函数。正常情况下，`await`命令后面是一个 Promise 对象，返回该对象的结果。如果不是 Promise 对象，就直接返回对应的值。另一种情况是，`await`命令后面是一个`thenable`对象（即定义了`then`方法的对象），那么`await`会将其等同于 Promise 对象。
+
+```js
+async function f() {
+  // 等同于
+  // return 123;
+  return await 123;
+}
+f().then(v => console.log(v))
+// 123
 
 
+class Sleep {
+  constructor(timeout) {
+    this.timeout = timeout;
+  }
+  then(resolve, reject) {
+    const startTime = Date.now();
+    setTimeout(
+      () => resolve(Date.now() - startTime),
+      this.timeout
+    );
+  }
+}
+(async () => {
+  const sleepTime = await new Sleep(1000);
+  console.log(sleepTime);
+})();
+// 1000
+```
 
+`await`命令后面的 Promise 对象如果变为`reject`状态，则`reject`的参数会被`catch`方法的回调函数接收到。任何一个`await`语句后面的 Promise 对象变为`reject`状态，那么整个`async`函数都会中断执行。
+
+```js
+async function f() {
+  await Promise.reject('出错了');
+}
+f()
+.then(v => console.log(v))
+.catch(e => console.log(e))
+// 出错了
+
+async function f() {
+  await Promise.reject('出错了');
+  await Promise.resolve('hello world'); // 不会执行
+}
+```
+
+有时，我们希望即使前一个异步操作失败，也不要中断后面的异步操作。这时可以将第一个`await`放在`try...catch`结构里面，这样不管这个异步操作是否成功，第二个`await`都会执行。另一种方法是`await`后面的 Promise 对象再跟一个`catch`方法，处理前面可能出现的错误。
+
+```js
+async function f() {
+  try {
+    await Promise.reject('出错了');
+  } catch(e) {
+  }
+  return await Promise.resolve('hello world');
+}
+f()
+.then(v => console.log(v))
+// hello world
+
+async function f() {
+  await Promise.reject('出错了')
+    .catch(e => console.log(e));
+  return await Promise.resolve('hello world');
+}
+f()
+.then(v => console.log(v))
+// 出错了
+// hello world
+```
+
+**`await`命令只能用在`async`函数之中，如果用在普通函数，就会报错。**
 
 
 
 ## 十六、Class（类）
+
+### 1.类的定义
+
+ES6 提供了更接近传统语言的写法，引入了 Class（类）这个概念，作为对象的模板。通过`class`关键字，可以定义类。
+
+```js
+//ES5
+function Point(x, y) {
+  this.x = x;
+  this.y = y;
+}
+Point.prototype.toString = function () {
+  return '(' + this.x + ', ' + this.y + ')';
+};
+var p = new Point(1, 2);
+
+//ES6
+class Point {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+  toString() {
+    return '(' + this.x + ', ' + this.y + ')';
+  }
+}
+```
+
+构造函数的`prototype`属性，在 ES6 的“类”上面继续存在。事实上，类的所有方法都定义在类的`prototype`属性上面。
+
+```js
+class Point {
+  constructor() {
+    // ...
+  }
+  toString() {
+    // ...
+  }
+  toValue() {
+    // ...
+  }
+}
+// 等同于
+Point.prototype = {
+  constructor() {},
+  toString() {},
+  toValue() {},
+};
+```
+
+### 2.构造方法
+
+`constructor`方法是类的默认方法，通过`new`命令生成对象实例时，自动调用该方法。一个类必须有`constructor`方法，如果没有显式定义，一个空的`constructor`方法会被默认添加。定义了其他带参数的`constructor`方法，默认空的`constructor`方法也还是存在的。
+
+```js
+class Point {
+}
+// 等同于
+class Point {
+  constructor() {}
+}
+```
+
+```js
+class Point {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    toString() {
+        return `{ x: ${this.x}, y: ${this.y}}`;
+    }
+
+}
+
+let point = new Point();
+console.log(point.toString());//{ x: undefined, y: undefined}
+
+let point1 = new Point(1,2);
+console.log(point1.toString());//{ x: 1, y: 2}
+```
+
+ES6 为`new`命令引入了一个`new.target`属性，该属性一般用在构造函数之中，返回`new`命令作用于的那个构造函数。如果构造函数不是通过`new`命令或`Reflect.construct()`调用的，`new.target`会返回`undefined`，因此这个属性可以用来确定构造函数是怎么调用的。需要注意的是，子类继承父类时，`new.target`会返回子类。
+
+```js
+class Rectangle {
+  constructor(length, width) {
+    console.log(new.target === Rectangle);
+    this.length = length;
+    this.width = width;
+  }
+}
+var obj = new Rectangle(3, 4); // 输出 true
+```
+
+利用这个特点，可以写出不能独立使用、必须继承后才能使用的类。
+
+```js
+class Shape {
+  constructor() {
+    if (new.target === Shape) {
+      throw new Error('本类不能实例化');
+    }
+  }
+}
+class Rectangle extends Shape {
+  constructor(length, width) {
+    super();
+    // ...
+  }
+}
+var x = new Shape();  // 报错
+var y = new Rectangle(3, 4);  // 正确
+```
+
+
+
+### 3.`this`和类原型
+
+与 ES5 一样，实例的属性除非显式定义在其本身（即定义在`this`对象上），否则都是定义在原型上（即定义在`class`上）。类的所有实例共享一个原型对象。
+
+```js
+//定义类
+class Point {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+  toString() {
+    return '(' + this.x + ', ' + this.y + ')';
+  }
+}
+var point = new Point(2, 3);
+point.toString() // (2, 3)
+point.hasOwnProperty('x') // true
+point.hasOwnProperty('y') // true
+point.hasOwnProperty('toString') // false
+point.__proto__.hasOwnProperty('toString') // true
+
+
+var p1 = new Point(2,3);
+var p2 = new Point(3,2);
+p1.__proto__ === p2.__proto__//类的所有实例共享一个原型对象
+//true
+```
+
+因为类的所有实例都共享一个原型对象，所以`__proto__`属性是相等的。这也意味着，可以通过实例的`__proto__`属性为“类”添加方法。
+
+```js
+var p1 = new Point(2,3);
+var p2 = new Point(3,2);
+p1.__proto__.printName = function () { return 'Oops' };
+p1.printName() // "Oops"
+p2.printName() // "Oops"
+var p3 = new Point(4,2);
+p3.printName() // "Oops"
+```
+
+**注意：类的方法内部如果含有`this`，它默认指向类的实例。**
+
+### 4.`getter`和`setter`
+
+与 ES5 一样，在“类”的内部可以使用`get`和`set`关键字，对某个属性设置存值函数和取值函数，拦截该属性的存取行为。
+
+```js
+class CustomHTMLElement {
+  constructor(element) {
+    this.element = element;
+  }
+  get html() {
+    return this.element.innerHTML;
+  }
+  set html(value) {
+    this.element.innerHTML = value;
+  }
+}
+var descriptor = Object.getOwnPropertyDescriptor(
+  CustomHTMLElement.prototype, "html"
+);
+"get" in descriptor  // true
+"set" in descriptor  // true
+```
+
+
+
+### 5.表达式
+
+类的属性名，可以采用表达式。
+
+```js
+let methodName = 'getArea';
+class Square {  
+  constructor(length) {    
+    // ...  
+  }  
+  [methodName]() {    
+    // ...  
+  }
+}
+```
+
+类也可以使用表达式的形式定义：
+
+```js
+const MyClass = class Me {
+  getClassName() {
+    return Me.name;
+  }
+};
+//如果类的内部没用到的话，可以省略Me
+const MyClass = class { /* ... */ };
+```
+
+采用class表达式写匿名类：
+
+```js
+let person = new class {
+  constructor(name) {
+    this.name = name;
+  }
+  sayName() {
+    console.log(this.name);
+  }
+}('张三');
+person.sayName(); // "张三"
+```
+
+
+
+### 6.严格模式
+
+类和模块的内部，默认就是严格模式，所以不需要使用`use strict`指定运行模式。只要你的代码写在类或模块之中，就只有严格模式可用。考虑到未来所有的代码，其实都是运行在模块之中，所以 ES6 实际上把整个语言升级到了严格模式。
+
+
+
+### 7.方法
+
+* 实例方法
+
+  ```js
+  class Foo {
+    method(){
+      //...
+    }
+  }
+  let foo = new Foo();
+  foo.method();
+  ```
+
+  
+
+* 静态方法
+
+  如果在一个方法前，加上`static`关键字，就表示该方法直接通过类来调用，这就称为“静态方法”。
+
+  ```js
+  class Foo {
+    static classMethod() {
+      return 'hello';
+    }
+  }
+  Foo.classMethod() // 'hello'
+  var foo = new Foo();
+  foo.classMethod()
+  // TypeError: foo.classMethod is not a function
+  ```
+
+  注意，如果静态方法包含`this`关键字，这个`this`指的是类，而不是实例。
+
+  ```js
+  class Foo {
+    static bar() {
+      this.baz();
+    }
+    static baz() {
+      console.log('hello');
+    }
+    baz() {
+      console.log('world');
+    }
+  }
+  Foo.bar() // hello
+  
+  ```
+
+  
+
+* 私有方法
+
+  在方法名之前，使用`#`表示。
+
+  ```js
+  class Foo {
+    #a;
+    #b;
+    constructor(a, b) {
+      this.#a = a;
+      this.#b = b;
+    }
+    #sum() {
+      return #a + #b;
+    }
+    printSum() {
+      console.log(this.#sum());
+    }
+  }
+  ```
+
+  私有方法前面，也可以加上`static`关键字，表示这是一个静态的私有方法。
+
+
+
+### 8.属性
+
+* 实例属性
+
+  实例属性除了定义在`constructor()`方法里面的`this`上面，也可以定义在类的最顶层。
+
+  ```js
+  class foo {
+    bar = 'hello';
+    baz = 'world';
+    constructor() {
+      // ...
+    }
+  }
+  ```
+
+  
+
+* 类静态属性
+
+  静态属性指的是 Class 本身的属性，即`Class.propName`，而不是定义在实例对象（`this`）上的属性。写法是在实例属性的前面，加上`static`关键字。
+
+  ```js
+  // 老写法
+  class Foo {
+    // ...
+  }
+  Foo.prop = 1;
+  // 新写法
+  class Foo {
+    static prop = 1;
+  }
+  ```
+
+* 私有属性
+
+  在属性名之前，使用`#`表示。
+
+  ```js
+  class IncreasingCounter {
+    #count = 0;
+    get value() {
+      console.log('Getting the current value!');
+      return this.#count;
+    }
+    increment() {
+      this.#count++;
+    }
+  }
+  ```
+
+  私有属性前面也可以加上`static`关键字，表示这是一个静态的私有属性。
+
+### 9.继承
+
+Class 可以通过`extends`关键字实现继承，这比 ES5 的通过修改原型链实现继承，要清晰和方便很多。
+
+```js
+class Point {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+}
+class ColorPoint extends Point {
+  constructor(x, y, color) {
+    super(x, y);
+    this.color = color;
+  }
+}
+let cp = new ColorPoint(25, 8, 'green');
+cp instanceof ColorPoint // true
+cp instanceof Point // true
+```
+
+* 子类必须在`constructor`方法中调用`super`方法，否则新建实例时会报错。
+
+  这是因为子类自己的`this`对象，必须先通过父类的构造函数完成塑造，得到与父类同样的实例属性和方法，然后再对其进行加工，加上子类自己的实例属性和方法。如果不调用`super`方法，子类就得不到`this`对象。
+
+* 在子类的构造函数中，只有调用`super`之后，才可以使用`this`关键字，否则会报错。
+
+  这是因为子类实例的构建，基于父类实例，只有`super`方法才能调用父类实例。
+
+  
+
+`Object.getPrototypeOf`方法可以用来从子类上获取父类。因此，可以使用这个方法判断，一个类是否继承了另一个类。
+
+```js
+Object.getPrototypeOf(ColorPoint) === Point
+// true
+```
+
+`super`这个关键字，既可以当作父类的构造函数使用，也可以当作对象使用。`super`作为对象时，在普通方法中，指向父类的原型对象；在静态方法中，指向父类。ES6 规定，在子类普通方法中通过`super`调用父类的方法时，方法内部的`this`指向当前的子类实例。所以定义在父类实例上的方法或属性，是无法通过`super`调用的。如果属性定义在父类的原型对象上，`super`就可以取到。
+
+```js
+class A {
+  constructor() {
+    this.p = 2;
+  }
+}
+A.prototype.x = 2;
+
+class B extends A {
+  constructor() {
+    super();
+    console.log(super.x) // 2
+  }
+  get m() {
+    return super.p;
+  }
+}
+let b = new B();
+b.m // undefined
+```
+
+如果`super`作为对象，用在静态方法之中，这时`super`将指向父类，而不是父类的原型对象。另外，在子类的静态方法中通过`super`调用父类的方法时，方法内部的`this`指向当前的子类，而不是子类的实例。
+
+```js
+class A {
+  constructor() {
+    this.x = 1;
+  }
+  static print() {
+    console.log(this.x);
+  }
+}
+class B extends A {
+  constructor() {
+    super();
+    this.x = 2;
+  }
+  static m() {
+    super.print();
+  }
+}
+B.x = 3;
+B.m() // 3
+```
+
+类同时有`prototype`属性和`__proto__`属性，因此同时存在两条继承链：
+
+* 子类的`__proto__`属性，表示构造函数的继承，总是指向父类
+
+* 子类`prototype`属性的`__proto__`属性，表示方法的继承，总是指向父类的`prototype`属性。
+
+  ```js
+  class A {
+  }
+  class B extends A {
+  }
+  B.__proto__ === A // true
+  B.prototype.__proto__ === A.prototype // true
+  ```
+
+* 子类实例的`__proto__`属性的`__proto__`属性，指向父类实例的`__proto__`属性。也就是说，子类的原型的原型，是父类的原型。
+
+  ```js
+  var p1 = new Point(2, 3);
+  var p2 = new ColorPoint(2, 3, 'red');
+  p2.__proto__ === p1.__proto__ // false
+  p2.__proto__.__proto__ === p1.__proto__ // true
+  ```
+
+
+
+Mixin模式实现多继承
+
+Mixin 指的是多个对象合成一个新的对象，新对象具有各个组成成员的接口。
+
+```js
+function mix(...mixins) {
+  class Mix {
+    constructor() {
+      for (let mixin of mixins) {
+        copyProperties(this, new mixin()); // 拷贝实例属性
+      }
+    }
+  }
+  for (let mixin of mixins) {
+    copyProperties(Mix, mixin); // 拷贝静态属性
+    copyProperties(Mix.prototype, mixin.prototype); // 拷贝原型属性
+  }
+  return Mix;
+}
+function copyProperties(target, source) {
+  for (let key of Reflect.ownKeys(source)) {
+    if ( key !== 'constructor'
+      && key !== 'prototype'
+      && key !== 'name'
+    ) {
+      let desc = Object.getOwnPropertyDescriptor(source, key);
+      Object.defineProperty(target, key, desc);
+    }
+  }
+}
+
+class DistributedEdit extends mix(Loggable, Serializable) {
+  // ...
+}
+```
 
 
 
