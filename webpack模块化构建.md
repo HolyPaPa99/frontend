@@ -4,6 +4,14 @@
 
 ![](images/webpack.png)
 
+参考：
+
+https://webpack.js.org/configuration/
+
+https://v4.webpack.docschina.org/guides/
+
+
+
 ## 二、配置
 
 **webpack 的配置文件`webpack.config.js`是 JavaScript 文件，文件内导出了一个 webpack配置的对象** webpack 会根据该配置定义的属性进行处理。
@@ -346,7 +354,7 @@ webpack 提供几种可选方式，帮助你在代码发生变化后自动编译
      "private": true,
      "scripts": {
        "test": "echo \"Error: no test specified\" && exit 1",
-      "watch": "webpack --watch",//启用watch mode脚本
+       "watch": "webpack --watch",//启用watch mode脚本
        "build": "webpack"
      },
      "keywords": [],
@@ -367,7 +375,7 @@ webpack 提供几种可选方式，帮助你在代码发生变化后自动编译
 
 * ### webpack-dev-server
 
-  `webpack-dev-server` 为你提供了一个基本的 web server，并且具有 live reloading(实时重新加载) 功能。
+  `webpack-dev-server` 为你提供了一个基本的 web server，并且具有 live reloading(实时重新加载) 功能。v4版本之前和之后有较大区别。详情参考：https://webpack.js.org/configuration/dev-server/
 
   ```js
   //webpack.config.js 
@@ -381,7 +389,7 @@ webpack 提供几种可选方式，帮助你在代码发生变化后自动编译
        print: './src/print.js',
      },
      devtool: 'inline-source-map',
-    devServer: { //dev server 默认端口8080
+    devServer: { //dev server 默认端口8080 v4版本写法
       static: './dist',
     },
      plugins: [
