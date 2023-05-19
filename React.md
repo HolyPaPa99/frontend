@@ -46,7 +46,7 @@ function AboutPage() {
 
 
 
-### 添加样式
+### 1.添加样式
 
 在 React 中，你可以使用 `className` 来指定一个 CSS 的 class。它与 HTML 的 [`class`](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class) 属性的工作方式相同：
 
@@ -83,7 +83,7 @@ export default function Profile() {
 
 
 
-### 显示数据
+### 2.显示数据
 
 JSX中使用大括号`{}`嵌入Javascript代码。
 
@@ -96,7 +96,7 @@ return (
 );
 ```
 
-### 条件渲染
+### 3.条件渲染
 
 * `if`
 
@@ -140,7 +140,7 @@ return (
 
   
 
-### 渲染列表和`key`
+### 4.渲染列表和`key`
 
 Keys 可以在 DOM 中的某些元素被增加或删除的时候帮助 React 识别哪些元素发生了变化。因此你应当给数组中的每一个元素赋予一个确定的标识。一个元素的 key 最好是这个元素在列表中拥有的一个独一无二的字符串。通常，我们使用来自数据的 id 作为元素的 key。数组元素中使用的 key 在其兄弟之间应该是独一无二的。然而，它们不需要是全局唯一的。当我们生成两个不同的数组时，我们可以使用相同的键。
 
@@ -169,7 +169,7 @@ export default function ShoppingList() {
 }
 ```
 
-### 响应事件
+### 5.响应事件
 
 通过在组件中声明 **事件处理** 函数来响应事件：
 
@@ -191,7 +191,7 @@ function MyButton() {
 
 ## 三、组件
 
-### 定义组件
+### 1.定义组件
 
 * 函数式
 
@@ -215,7 +215,7 @@ function MyButton() {
 
   
 
-### 导出组件
+### 2.导出组件
 
 通过`export或export default`(详细用法参考ES6语法)导出组件：
 
@@ -243,7 +243,7 @@ export default function Gallery() {
 
 
 
-### 导入组件
+### 3.导入组件
 
 通过`import`(详细用法参考ES6语法)导入组件：
 
@@ -259,7 +259,7 @@ export default function App() {
 
 
 
-### props
+### 4.props
 
 React 组件使用 *props* 来互相通信。每个父组件都可以提供 props 给它的子组件，从而将一些信息传递给它。`props`是不可变的，当一个组件需要改变它的 props（例如，响应用户交互或新数据）时，它不得不“请求”它的父组件传递 **不同的 props** —— 一个新对象！它的旧 props 将被丢弃，最终 JavaScript 引擎将回收它们占用的内存。一个组件可以有多个`props`属性，这些 props 在 `({` 和 `})` 之间，并由逗号分隔。`props`可以设置默认值，如`function Avatar({person, size = 100})`。
 
@@ -307,7 +307,7 @@ export default function Profile() {
 }
 ```
 
-### ref
+### 5.ref
 
 React 支持一种非常特殊的属性 **Ref** ，你可以用来绑定到 render() 输出的任何组件上。这个特殊的属性允许你引用 render() 返回的相应的支撑实例（ backing instance ）。这样就可以确保在任何时间总是拿到正确的实例。
 
@@ -340,7 +340,7 @@ ReactDOM.render(
 
 
 
-### 组件的生命周期
+### 6.组件的生命周期
 
 参考：https://zh-hans.legacy.reactjs.org/docs/react-component.html#reference
 
@@ -392,7 +392,9 @@ ReactDOM.render(
 
 参考：https://zh-hans.react.dev/reference/react/
 
-### state hooks
+所有的hooks都只能在组件的最上层调用，不能在循环里或有条件的情况下使用。
+
+### 1.state hooks
 
 state可以让组件记录用户输入的数据。例如一个表单组件可以用state来记录用户输入，一个图片选取组件可以使用state来记录用户选择的图片。
 
@@ -456,33 +458,1324 @@ export default function Counter() {
 
 
 
-### context hooks
+### 2.context hooks
+
+`context`使得组件可以从多级父组件获得数据而不用通过props传递。例如最顶层组件可以通过`context`往下级组件传递app的UI主题，不管中间相隔多少层级。通过`createContext`方法创建一个context，使用`useContext`方法来读取和订阅组件中的context。
+
+#### createContext
+
+使用`createContext`创建一个context。`createContext`有一个参数，就是context的默认值，默认值是不会被改变的，可以是null。
+
+```jsx
+const ThemeContext = createContext('light');
+```
+
+
+
+#### Provider
+
+若要将 context 传递给下级组件，父组件需要包装到相应的 context provider。
+
+```jsx
+function MyPage() {
+  return (
+    <ThemeContext.Provider value="dark">
+      <Form />
+    </ThemeContext.Provider>
+  );
+}
+
+function Form() {
+  // ... 在内部渲染 buttons ...
+}
+```
+
+provider 和 `Button` 之间有多少层组件并不重要。当 `Form` 中的任何位置的 `Button` 调用 `useContext(ThemeContext)` 时，它都将接收 `"dark"` 作为值。
+
+如果你忘记了指定 `value`，它会像这样传值 `value={undefined}`。
+
+```jsx
+<ThemeContext.Provider>
+   <Button />
+</ThemeContext.Provider>
+```
+
+
+
+通过在 provider 中使用不同的值包装树的某个部分，可以覆盖该部分的 context。可以根据需要多次嵌套和覆盖 provider。
+
+```jsx
+<ThemeContext.Provider value="dark">
+  ...
+  <ThemeContext.Provider value="light">
+    <Footer />
+  </ThemeContext.Provider>
+  ...
+</ThemeContext.Provider>
+```
+
+
+
+#### useContext
+
+调用 `useContext` 来读取和订阅`context`。`useContext` 为调用组件返回 context 的值。它被确定为传递给树中调用组件上方最近的 `SomeContext.Provider` 的 `value`。如果没有这样的 provider，那么返回的将是创建该 context 时传递给 `createContext` 的 `defaultValue`。返回的值始终是最新的。如果 context 发生变化，React 会自动重新渲染读取 context 的组件。`useContext`有一个参数： 
+
+- `SomeContext`：先前用 `createContext`创建的 context。context 本身不包含信息，它只代表你可以提供或从组件中读取的信息类型。
+
+```jsx
+import { useContext } from 'react';
+
+function Button() {
+  const theme = useContext(ThemeContext);
+  // ...
+```
+
+
+
+#### 应用示例
+
+```jsx
+import { createContext, useContext, useState } from 'react';
+
+const ThemeContext = createContext('light');
+
+export default function MyApp() {
+  const [theme, setTheme] = useState('light');
+  return (
+    <>
+      <ThemeContext.Provider value={theme}>
+        <Form />
+      </ThemeContext.Provider>
+      <Button onClick={() => {
+        setTheme(theme === 'dark' ? 'light' : 'dark');
+      }}>
+        Toggle theme
+      </Button>
+    </>
+  )
+}
+
+function Form({ children }) {
+  return (
+    <Panel title="Welcome">
+      <Button>Sign up</Button>
+      <Button>Log in</Button>
+    </Panel>
+  );
+}
+
+function Panel({ title, children }) {
+  const theme = useContext(ThemeContext);
+  const className = 'panel-' + theme;
+  return (
+    <section className={className}>
+      <h1>{title}</h1>
+      {children}
+    </section>
+  )
+}
+
+function Button({ children, onClick }) {
+  const theme = useContext(ThemeContext);
+  const className = 'button-' + theme;
+  return (
+    <button className={className} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+```
+
+
+
+### 3.ref hooks
+
+`Refs`让组件可以持有一些非渲染数据，数据的更新不会触发组件的重新渲染。`Refs`是React系统的逃生仓。通常用来操作DOM节点。
+
+**不要在渲染期间写入 \*或者读取\* `ref.current`。**如果 **不得不** 在渲染期间读取 或者写入，使用 state 代替。
+
+#### useRef
+
+引用一个不需要渲染的值。
+
+参数 ：
+
+- `initialValue`：ref 对象的 `current` 属性的初始值。可以是任意类型的值。这个参数会首次渲染后被忽略。
+
+返回值 ：
+
+`useRef` 返回一个只有一个属性的对象:
+
+- `current`：最初，它被设置为你传递的 `initialValue`。之后你可以把它设置为其他值。如果你把 ref 对象作为一个 JSX 节点的 `ref` 属性传递给 React，React 将为它设置 `current` 属性。
+
+```jsx
+import { useState, useRef } from 'react';
+
+export default function Stopwatch() {
+  const [startTime, setStartTime] = useState(null);
+  const [now, setNow] = useState(null);
+  const intervalRef = useRef(null);
+
+  function handleStart() {
+    setStartTime(Date.now());
+    setNow(Date.now());
+
+    clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setNow(Date.now());
+    }, 10);
+  }
+
+  function handleStop() {
+    clearInterval(intervalRef.current);
+  }
+
+  let secondsPassed = 0;
+  if (startTime != null && now != null) {
+    secondsPassed = (now - startTime) / 1000;
+  }
+
+  return (
+    <>
+      <h1>Time passed: {secondsPassed.toFixed(3)}</h1>
+      <button onClick={handleStart}>
+        Start
+      </button>
+      <button onClick={handleStop}>
+        Stop
+      </button>
+    </>
+  );
+}
+```
+
+使用 ref 操作DOM是非常常见的。React 内置了对它的支持。
+
+```jsx
+//滚动图片到视图
+import { useRef } from 'react';
+
+export default function CatFriends() {
+  const listRef = useRef(null);
+
+  function scrollToIndex(index) {
+    const listNode = listRef.current;
+    // This line assumes a particular DOM structure:
+    const imgNode = listNode.querySelectorAll('li > img')[index];
+    imgNode.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center'
+    });
+  }
+
+  return (
+    <>
+      <nav>
+        <button onClick={() => scrollToIndex(0)}>
+          Tom
+        </button>
+        <button onClick={() => scrollToIndex(1)}>
+          Maru
+        </button>
+        <button onClick={() => scrollToIndex(2)}>
+          Jellylorum
+        </button>
+      </nav>
+      <div>
+        <ul ref={listRef}>
+          <li>
+            <img
+              src="https://placekitten.com/g/200/200"
+              alt="Tom"
+            />
+          </li>
+          <li>
+            <img
+              src="https://placekitten.com/g/300/200"
+              alt="Maru"
+            />
+          </li>
+          <li>
+            <img
+              src="https://placekitten.com/g/250/200"
+              alt="Jellylorum"
+            />
+          </li>
+        </ul>
+      </div>
+    </>
+  );
+}
+```
+
+```jsx
+//播放和暂停视频
+import { useState, useRef } from 'react';
+
+export default function VideoPlayer() {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const ref = useRef(null);
+
+  function handleClick() {
+    const nextIsPlaying = !isPlaying;
+    setIsPlaying(nextIsPlaying);
+
+    if (nextIsPlaying) {
+      ref.current.play();
+    } else {
+      ref.current.pause();
+    }
+  }
+
+  return (
+    <>
+      <button onClick={handleClick}>
+        {isPlaying ? 'Pause' : 'Play'}
+      </button>
+      <video
+        width="250"
+        ref={ref}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+      >
+        <source
+          src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+          type="video/mp4"
+        />
+      </video>
+    </>
+  );
+}
+```
+
+
+
+#### useImperativeHandle
+
+用来自定义由 ref 暴露出来的句柄。默认情况下，组件不会将它们的 DOM 节点暴露给父组件。使用useImperativeHandle向父组件暴露一个自定义的 ref 句柄或暴露命令式方法。
+
+参数 
+
+- `ref`：该 `ref` 是你从 [`forwardRef` 渲染函数](https://zh-hans.react.dev/reference/react/forwardRef#render-function) 中获得的第二个参数。
+- `createHandle`：该函数无需参数，它返回你想要暴露的 ref 的句柄。该句柄可以包含任何类型。通常，你会返回一个包含你想暴露的方法的对象。
+- **可选的** `dependencies`：函数 `createHandle` 代码中所用到的所有反应式的值的列表。反应式的值包含 props、状态和其他所有直接在你组件体内声明的变量和函数。倘若你的代码检查器已 [为 React 配置好](https://zh-hans.react.dev/learn/editor-setup#linting)，它会验证每一个反应式的值是否被正确指定为依赖项。该列表的长度必须是一个常数项，并且必须按照 `[dep1, dep2, dep3]` 的形式罗列各依赖项。React 会使用 [`Object.is`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is) 来比较每一个依赖项与其对应的之前值。如果一次重新渲染导致某些依赖项发生了改变，或你没有提供这个参数列表，你的函数 `createHandle` 将会被重新执行，而新生成的句柄则会被分配给 ref。
+
+返回值 
+
+`useImperativeHandle` 返回 `undefined`。
+
+```jsx
+//MyInput
+import { forwardRef, useRef, useImperativeHandle } from 'react';
+
+const MyInput = forwardRef(function MyInput(props, ref) {
+  const inputRef = useRef(null);
+
+  //在这里不直接暴露inputDOM给父节点而是返回一个方法对象
+  useImperativeHandle(ref, () => {
+    return {
+      focus() {
+        inputRef.current.focus();
+      },
+      scrollIntoView() {
+        inputRef.current.scrollIntoView();
+      },
+    };
+  }, []);
+
+  return <input {...props} ref={inputRef} />;
+});
+```
+
+
+
+```jsx
+import { useRef } from 'react';
+import MyInput from './MyInput.js';
+
+export default function Form() {
+  const ref = useRef(null);
+
+  function handleClick() {
+    ref.current.focus();
+    // 下方代码不起作用，因为 DOM 节点并未被暴露出来：
+    // ref.current.style.opacity = 0.5;
+  }
+
+  return (
+    <form>
+      <MyInput label="Enter your name:" ref={ref} />
+      <button type="button" onClick={handleClick}>
+        Edit
+      </button>
+    </form>
+  );
+}
+```
+
+
+
+**不要滥用 ref。** 你应当仅在你没法通过 prop 来表达 *命令式* 行为的时候才使用 ref：例如，滚动到指定节点、聚焦某个节点、触发一次动画，以及选择文本等等。**如果可以通过 prop 实现，那就不应该使用 ref**。
+
+
+
+### 4.effect hooks
+
+Effects允许组件连接到外部系统并与之同步。这包括处理网络、浏览器 DOM、动画、使用不同 UI 库编写的小部件以及其他非 React 代码。
+
+#### useEffect
+
+用来与外部系统做同步处理的hook。而且这些效果只会在客户端执行不会在服务器渲染时执行。
+
+参数
+
+* setup 
+
+  效果函数，可以返回一个清理函数。当组件挂载到DOM时react会执行效果函数。当组件依赖值更新的时候会先执行清理函数（如果有的话，此时使用旧的依赖值）然后执行效果函数（此时使用新的依赖值）。当组件被移除时会执行清理函数（如果有的话）。
+
+* dependencies
+
+  可选值。setup函数的依赖值列表（必须是固定长度的，如：`[dep1, dep2, dep3]`），可以是props、state或者组件内声明的其他变量。 如果忽略这个参数的话，每次重新渲染组件时都会执委效果函数。如果依赖列表中包含你在组件内定义的对象或函数，可能会导致效果函数被重复执行，为了解决这个问题请尽量不要使用这些对象或函数做为依赖值。
+
+返回值
+
+* `undefined`
+
+使用示例：
+
+```jsx
+//监听浏览器全局事件
+export default function App() {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    function handleMove(e) {
+      setPosition({ x: e.clientX, y: e.clientY });
+    }
+    window.addEventListener('pointermove', handleMove);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+    };
+  }, []);
+
+  return (
+    <div style={{
+      position: 'absolute',
+      backgroundColor: 'pink',
+      borderRadius: '50%',
+      opacity: 0.6,
+      transform: `translate(${position.x}px, ${position.y}px)`,
+      pointerEvents: 'none',
+      left: -20,
+      top: -20,
+      width: 40,
+      height: 40,
+    }} />
+  );
+}
+```
+
+```jsx
+//触发动画效果
+import { useState, useEffect, useRef } from 'react';
+import { FadeInAnimation } from './animation.js';
+
+function Welcome() {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const animation = new FadeInAnimation(ref.current);
+    animation.start(1000);
+    return () => {
+      animation.stop();
+    };
+  }, []);
+
+  return (
+    <h1
+      ref={ref}
+      style={{
+        opacity: 0,
+        color: 'white',
+        padding: 50,
+        textAlign: 'center',
+        fontSize: 50,
+        backgroundImage: 'radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%)'
+      }}
+    >
+      Welcome
+    </h1>
+  );
+}
+
+export default function App() {
+  const [show, setShow] = useState(false);
+  return (
+    <>
+      <button onClick={() => setShow(!show)}>
+        {show ? 'Remove' : 'Show'}
+      </button>
+      <hr />
+      {show && <Welcome />}
+    </>
+  );
+}
+
+
+//animation.js
+export class FadeInAnimation {
+  constructor(node) {
+    this.node = node;
+  }
+  start(duration) {
+    this.duration = duration;
+    if (this.duration === 0) {
+      // Jump to end immediately
+      this.onProgress(1);
+    } else {
+      this.onProgress(0);
+      // Start animating
+      this.startTime = performance.now();
+      this.frameId = requestAnimationFrame(() => this.onFrame());
+    }
+  }
+  onFrame() {
+    const timePassed = performance.now() - this.startTime;
+    const progress = Math.min(timePassed / this.duration, 1);
+    this.onProgress(progress);
+    if (progress < 1) {
+      // We still have more frames to paint
+      this.frameId = requestAnimationFrame(() => this.onFrame());
+    }
+  }
+  onProgress(progress) {
+    this.node.style.opacity = progress;
+  }
+  stop() {
+    cancelAnimationFrame(this.frameId);
+    this.startTime = null;
+    this.frameId = null;
+    this.duration = 0;
+  }
+}
+
+
+```
+
+```jsx
+//控制弹窗
+import { useState } from 'react';
+import ModalDialog from './ModalDialog.js';
+
+export default function App() {
+  const [show, setShow] = useState(false);
+  return (
+    <>
+      <button onClick={() => setShow(true)}>
+        Open dialog
+      </button>
+      <ModalDialog isOpen={show}>
+        Hello there!
+        <br />
+        <button onClick={() => {
+          setShow(false);
+        }}>Close</button>
+      </ModalDialog>
+    </>
+  );
+}
+
+//ModalDialog.js
+import { useEffect, useRef } from 'react';
+
+export default function ModalDialog({ isOpen, children }) {
+  const ref = useRef();
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const dialog = ref.current;
+    dialog.showModal();
+    return () => {
+      dialog.close();
+    };
+  }, [isOpen]);
+
+  return <dialog ref={ref}>{children}</dialog>;
+}
+
+
+```
+
+**使用`useEffect`来控制第三方组件**
+
+有时候项目中会使用到一些非react的第三方组件，为了实现让第三方组件和你写的react组件的`props`或`state`数据可以使用`useEffect`来调用第三组件的数据同步方法。例如：
+
+```jsx
+//App.js
+import { useState } from 'react';
+import Map from './Map.js';
+
+export default function App() {
+  const [zoomLevel, setZoomLevel] = useState(0);
+  return (
+    <>
+      Zoom level: {zoomLevel}x
+      <button onClick={() => setZoomLevel(zoomLevel + 1)}>+</button>
+      <button onClick={() => setZoomLevel(zoomLevel - 1)}>-</button>
+      <hr />
+      <Map zoomLevel={zoomLevel} />
+    </>
+  );
+}
+
+
+//Map.js
+import { useRef, useEffect } from 'react';
+import { MapWidget } from './map-widget.js';
+
+export default function Map({ zoomLevel }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+
+  useEffect(() => {
+    if (mapRef.current === null) {
+      mapRef.current = new MapWidget(containerRef.current);
+    }
+
+    const map = mapRef.current;
+    map.setZoom(zoomLevel);
+  }, [zoomLevel]);
+
+  return (
+    <div
+      style={{ width: 200, height: 200 }}
+      ref={containerRef}
+    />
+  );
+}
+
+//map-widget.js
+import 'leaflet/dist/leaflet.css';
+import * as L from 'leaflet';
+
+export class MapWidget {
+  constructor(domNode) {
+    this.map = L.map(domNode, {
+      zoomControl: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      scrollWheelZoom: false,
+      zoomAnimation: false,
+      touchZoom: false,
+      zoomSnap: 0.1
+    });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(this.map);
+    this.map.setView([0, 0], 0);
+  }
+  setZoom(level) {
+    this.map.setZoom(level);
+  }
+}
+
+```
+
+**实现加载数据效果**
+
+```jsx
+import { useState, useEffect } from 'react';
+import { fetchBio } from './api.js';
+
+export default function Page() {
+  const [person, setPerson] = useState('Alice');
+  const [bio, setBio] = useState(null);
+  useEffect(() => {
+    async function startFetching() {
+      setBio(null);
+      const result = await fetchBio(person);
+      if (!ignore) {
+        setBio(result);
+      }
+    }
+
+    let ignore = false;
+    startFetching();
+    return () => {
+      ignore = true;
+    }
+  }, [person]);
+
+  return (
+    <>
+      <select value={person} onChange={e => {
+        setPerson(e.target.value);
+      }}>
+        <option value="Alice">Alice</option>
+        <option value="Bob">Bob</option>
+        <option value="Taylor">Taylor</option>
+      </select>
+      <hr />
+      <p><i>{bio ?? 'Loading...'}</i></p>
+    </>
+  );
+}
+
+
+```
+
+
+
+#### useLayoutEffect
+
+与useEffect类似，但是useLayoutEffect在浏览器重新绘制屏幕前执行，会消耗性能所以尽可能使用useEffect。
+
+用例：调用 useLayoutEffect 在浏览器重新绘制屏幕之前执行布局测量
+
+```jsx
+//App.js
+import ButtonWithTooltip from './ButtonWithTooltip.js';
+
+export default function App() {
+  return (
+    <div>
+      <ButtonWithTooltip
+        tooltipContent={
+          <div>
+            This tooltip does not fit above the button.
+            <br />
+            This is why it's displayed below instead!
+          </div>
+        }
+      >
+        Hover over me (tooltip above)
+      </ButtonWithTooltip>
+      <div style={{ height: 50 }} />
+      <ButtonWithTooltip
+        tooltipContent={
+          <div>This tooltip fits above the button</div>
+        }
+      >
+        Hover over me (tooltip below)
+      </ButtonWithTooltip>
+      <div style={{ height: 50 }} />
+      <ButtonWithTooltip
+        tooltipContent={
+          <div>This tooltip fits above the button</div>
+        }
+      >
+        Hover over me (tooltip below)
+      </ButtonWithTooltip>
+    </div>
+  );
+}
+
+//ButtonWithTooltip.js
+import { useState, useRef } from 'react';
+import Tooltip from './Tooltip.js';
+
+export default function ButtonWithTooltip({ tooltipContent, ...rest }) {
+  const [targetRect, setTargetRect] = useState(null);
+  const buttonRef = useRef(null);
+  return (
+    <>
+      <button
+        {...rest}
+        ref={buttonRef}
+        onPointerEnter={() => {
+          const rect = buttonRef.current.getBoundingClientRect();
+          setTargetRect({
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+          });
+        }}
+        onPointerLeave={() => {
+          setTargetRect(null);
+        }}
+      />
+      {targetRect !== null && (
+        <Tooltip targetRect={targetRect}>
+          {tooltipContent}
+        </Tooltip>
+      )
+    }
+    </>
+  );
+}
+
+//Tooltip.js
+import { useRef, useLayoutEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import TooltipContainer from './TooltipContainer.js';
+
+export default function Tooltip({ children, targetRect }) {
+  const ref = useRef(null);
+  const [tooltipHeight, setTooltipHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const { height } = ref.current.getBoundingClientRect();
+    setTooltipHeight(height);
+    console.log('Measured tooltip height: ' + height);
+  }, []);
+
+  let tooltipX = 0;
+  let tooltipY = 0;
+  if (targetRect !== null) {
+    tooltipX = targetRect.left;
+    tooltipY = targetRect.top - tooltipHeight;
+    if (tooltipY < 0) {
+      // It doesn't fit above, so place below.
+      tooltipY = targetRect.bottom;
+    }
+  }
+
+  return createPortal(
+    <TooltipContainer x={tooltipX} y={tooltipY} contentRef={ref}>
+      {children}
+    </TooltipContainer>,
+    document.body
+  );
+}
+
+//TooltipContainer.js
+export default function TooltipContainer({ children, x, y, contentRef }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        pointerEvents: 'none',
+        left: 0,
+        top: 0,
+        transform: `translate3d(${x}px, ${y}px, 0)`
+      }}
+    >
+      <div ref={contentRef} className="tooltip">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+```
+
+
+
+#### useInsertionEffect
+
+主要用于CSS-in-JS库开发。
+
+```jsx
+// Inside your CSS-in-JS library
+let isInserted = new Set();
+function useCSS(rule) {
+  useInsertionEffect(() => {
+    // As explained earlier, we don't recommend runtime injection of <style> tags.
+    // But if you have to do it, then it's important to do in useInsertionEffect.
+    if (!isInserted.has(rule)) {
+      isInserted.add(rule);
+      document.head.appendChild(getStyleForRule(rule));
+    }
+  });
+  return rule;
+}
+
+function Button() {
+  const className = useCSS('...');
+  return <div className={className} />;
+}
+```
+
+
+
+### 5.performance hooks
+
+优化渲染性能，使用performance hooks来缓存计算结果或跳过不必要的重新渲染达到提升性能。
+
+#### useMemo
+
+用于缓存计算结果。
+
+参数
+
+* calculateValue
+
+  缓存值计算函数。不带参数的纯函数而且返回值可以是任何类型，react会在初始化渲染的时候调用该函数来计算缓存值。当下一次渲染的时候如果dependencies没有改变react将返上次的缓存值，如果dependencies改变则重新计算并更新缓存值。
+
+* dependencies
+
+  缓存值计算函数内参考的值列表。可以包含props、state或其他在组件内定义的变量，但必须是固定长度的，如：`[dep1, dep2, dep3]`。
+
+返回值
+
+* 缓存值 
+
+用例1: 使用useMemo避免重复计算
+
+```jsx
+//App.js
+import { useState } from 'react';
+import { createTodos } from './utils.js';
+import TodoList from './TodoList.js';
+
+const todos = createTodos();
+
+export default function App() {
+  const [tab, setTab] = useState('all');
+  const [isDark, setIsDark] = useState(false);
+  return (
+    <>
+      <button onClick={() => setTab('all')}>
+        All
+      </button>
+      <button onClick={() => setTab('active')}>
+        Active
+      </button>
+      <button onClick={() => setTab('completed')}>
+        Completed
+      </button>
+      <br />
+      <label>
+        <input
+          type="checkbox"
+          checked={isDark}
+          onChange={e => setIsDark(e.target.checked)}
+        />
+        Dark mode
+      </label>
+      <hr />
+      <TodoList
+        todos={todos}
+        tab={tab}
+        theme={isDark ? 'dark' : 'light'}
+      />
+    </>
+  );
+}
+
+
+//TodoList.js
+import { useMemo } from 'react';
+import { filterTodos } from './utils.js'
+
+export default function TodoList({ todos, theme, tab }) {
+  const visibleTodos = useMemo(
+    () => filterTodos(todos, tab),
+    [todos, tab]
+  );
+  return (
+    <div className={theme}>
+      <p><b>Note: <code>filterTodos</code> is artificially slowed down!</b></p>
+      <ul>
+        {visibleTodos.map(todo => (
+          <li key={todo.id}>
+            {todo.completed ?
+              <s>{todo.text}</s> :
+              todo.text
+            }
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+//utils.js
+export function createTodos() {
+  const todos = [];
+  for (let i = 0; i < 50; i++) {
+    todos.push({
+      id: i,
+      text: "Todo " + (i + 1),
+      completed: Math.random() > 0.5
+    });
+  }
+  return todos;
+}
+
+export function filterTodos(todos, tab) {
+  console.log('[ARTIFICIALLY SLOW] Filtering ' + todos.length + ' todos for "' + tab + '" tab.');
+  let startTime = performance.now();
+  while (performance.now() - startTime < 500) {
+    // Do nothing for 500 ms to emulate extremely slow code
+  }
+
+  return todos.filter(todo => {
+    if (tab === 'all') {
+      return true;
+    } else if (tab === 'active') {
+      return !todo.completed;
+    } else if (tab === 'completed') {
+      return todo.completed;
+    }
+  });
+}
+
+```
+
+用例2: 使用useMemo跳过重新渲染
+
+```jsx
+//App.js
+import { useState } from 'react';
+import { createTodos } from './utils.js';
+import TodoList from './TodoList.js';
+
+const todos = createTodos();
+
+export default function App() {
+  const [tab, setTab] = useState('all');
+  const [isDark, setIsDark] = useState(false);
+  return (
+    <>
+      <button onClick={() => setTab('all')}>
+        All
+      </button>
+      <button onClick={() => setTab('active')}>
+        Active
+      </button>
+      <button onClick={() => setTab('completed')}>
+        Completed
+      </button>
+      <br />
+      <label>
+        <input
+          type="checkbox"
+          checked={isDark}
+          onChange={e => setIsDark(e.target.checked)}
+        />
+        Dark mode
+      </label>
+      <hr />
+      <TodoList
+        todos={todos}
+        tab={tab}
+        theme={isDark ? 'dark' : 'light'}
+      />
+    </>
+  );
+}
+
+//TodoList.js
+import { useMemo } from 'react';
+import List from './List.js';
+import { filterTodos } from './utils.js'
+
+export default function TodoList({ todos, theme, tab }) {
+  const visibleTodos = useMemo(
+    () => filterTodos(todos, tab),
+    [todos, tab]
+  );
+  return (
+    <div className={theme}>
+      <p><b>Note: <code>List</code> is artificially slowed down!</b></p>
+      <List items={visibleTodos} />
+    </div>
+  );
+}
+
+//List.js
+import { memo } from 'react';
+
+const List = memo(function List({ items }) {
+  console.log('[ARTIFICIALLY SLOW] Rendering <List /> with ' + items.length + ' items');
+  let startTime = performance.now();
+  while (performance.now() - startTime < 500) {
+    // Do nothing for 500 ms to emulate extremely slow code
+  }
+
+  return (
+    <ul>
+      {items.map(item => (
+        <li key={item.id}>
+          {item.completed ?
+            <s>{item.text}</s> :
+            item.text
+          }
+        </li>
+      ))}
+    </ul>
+  );
+});
+
+export default List;
+
+//utils.js
+export function createTodos() {
+  const todos = [];
+  for (let i = 0; i < 50; i++) {
+    todos.push({
+      id: i,
+      text: "Todo " + (i + 1),
+      completed: Math.random() > 0.5
+    });
+  }
+  return todos;
+}
+
+export function filterTodos(todos, tab) {
+  return todos.filter(todo => {
+    if (tab === 'all') {
+      return true;
+    } else if (tab === 'active') {
+      return !todo.completed;
+    } else if (tab === 'completed') {
+      return todo.completed;
+    }
+  });
+}
+
+```
+
+
+
+#### useCallback
+
+缓存函数定义。
+
+参数
+
+* fn
+
+  要缓存的函数。缓存函数可以是带任意参数和返回值。在初始化渲染时react会返回该缓存函数，下次渲染时如果dependencies没有改变则返回该缓存函数，如果dependencies改变则重新获取你传入的函数并更新缓存。
+
+* dependencies
+
+  缓存函数内参考的值列表。可以包含props、state或其他在组件内定义的变量，但必须是固定长度的，如：`[dep1, dep2, dep3]`。
+
+用例：
+
+```jsx
+
+//App.js
+import { useState } from 'react';
+import ProductPage from './ProductPage.js';
+
+export default function App() {
+  const [isDark, setIsDark] = useState(false);
+  return (
+    <>
+      <label>
+        <input
+          type="checkbox"
+          checked={isDark}
+          onChange={e => setIsDark(e.target.checked)}
+        />
+        Dark mode
+      </label>
+      <hr />
+      <ProductPage
+        referrerId="wizard_of_oz"
+        productId={123}
+        theme={isDark ? 'dark' : 'light'}
+      />
+    </>
+  );
+}
+
+//ProductPage.js
+import { useCallback } from 'react';
+import ShippingForm from './ShippingForm.js';
+
+export default function ProductPage({ productId, referrer, theme }) {
+  const handleSubmit = useCallback((orderDetails) => {
+    post('/product/' + productId + '/buy', {
+      referrer,
+      orderDetails,
+    });
+  }, [productId, referrer]);
+
+  return (
+    <div className={theme}>
+      <ShippingForm onSubmit={handleSubmit} />
+    </div>
+  );
+}
+
+function post(url, data) {
+  // Imagine this sends a request...
+  console.log('POST /' + url);
+  console.log(data);
+}
+
+//ShippingForm.js
+import { memo, useState } from 'react';
+
+const ShippingForm = memo(function ShippingForm({ onSubmit }) {
+  const [count, setCount] = useState(1);
+
+  console.log('[ARTIFICIALLY SLOW] Rendering <ShippingForm />');
+  let startTime = performance.now();
+  while (performance.now() - startTime < 500) {
+    // Do nothing for 500 ms to emulate extremely slow code
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const orderDetails = {
+      ...Object.fromEntries(formData),
+      count
+    };
+    onSubmit(orderDetails);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p><b>Note: <code>ShippingForm</code> is artificially slowed down!</b></p>
+      <label>
+        Number of items:
+        <button type="button" onClick={() => setCount(count - 1)}>–</button>
+        {count}
+        <button type="button" onClick={() => setCount(count + 1)}>+</button>
+      </label>
+      <label>
+        Street:
+        <input name="street" />
+      </label>
+      <label>
+        City:
+        <input name="city" />
+      </label>
+      <label>
+        Postal code:
+        <input name="zipCode" />
+      </label>
+      <button type="submit">Submit</button>
+    </form>
+  );
+});
+
+export default ShippingForm;
+
+```
+
+
+
+#### useTransition
+
+允许标记一个state更新操作不阻塞UI，允许其他更新打断该state的更新操作。
+
+参数：无
+
+返回值
+
+* `[isPending, startTransition]`
+
+  `isPending`标志告诉你是否有一个在等待解决的transition
+
+  `startTransition`方法用来标记一个state更新操作为transition。`startTransition`方法有一个参数`scope`, `scope`是一个没有参数没有返回值的同步函数，函数内执行的state更新操作被标记为transition操作。 
+
+```jsx
+function TabContainer() {
+  const [isPending, startTransition] = useTransition();
+  const [tab, setTab] = useState('about');
+
+  function selectTab(nextTab) {
+    startTransition(() => {
+      setTab(nextTab);
+    });
+  }
+  // ...
+}
+```
+
+```jsx
+import { useTransition } from 'react';
+
+export default function TabButton({ children, isActive, onClick }) {
+  if (isActive) {
+    return <b>{children}</b>
+  }
+  return (
+    <button onClick={() => {
+      onClick();
+    }}>
+      {children}
+    </button>
+  )
+}
+```
+
+```jsx
+import { useTransition } from 'react';
+
+export default function TabButton({ children, isActive, onClick }) {
+  const [isPending, startTransition] = useTransition();
+  if (isActive) {
+    return <b>{children}</b>
+  }
+  if (isPending) {
+    return <b className="pending">{children}</b>;
+  }
+  return (
+    <button onClick={() => {
+      startTransition(() => {
+        onClick();
+      });
+    }}>
+      {children}
+    </button>
+  );
+}
+
+```
+
+
+
+#### useDeferredValue
+
+后台延迟加载UI，允许其他部分先加载。
+
+参数
+
+* `value` 需要延迟加载的值，可以是任何类型。
+
+返回值： 组件初始化渲染时返回最初的设定的值。更新渲染时会返回旧的值渲染，然后在后台使用新的值来渲染最后再更新UI。
+
+```jsx
+import { Suspense, useState, useDeferredValue } from 'react';
+import SearchResults from './SearchResults.js';
+
+export default function App() {
+  const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
+  return (
+    <>
+      <label>
+        Search albums:
+        <input value={query} onChange={e => setQuery(e.target.value)} />
+      </label>
+      <Suspense fallback={<h2>Loading...</h2>}>
+        <SearchResults query={deferredQuery} />
+      </Suspense>
+    </>
+  );
+}
+
+```
 
 
 
 
 
-### ref hooks
+### 6.其他hooks
 
+以下这些hooks主要用于库开发，一般应用开发中不使用。
 
+详细参考：https://zh-hans.react.dev/reference/react
 
-### effect hooks
+#### useDebugValue
 
+#### useId
 
-
-### performance hooks
-
-
-
-
-
-### other hooks
-
-
-
-
-
-
+#### useSyncExternalStore
 
 
 
