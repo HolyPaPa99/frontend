@@ -1787,7 +1787,256 @@ export default function App() {
 
 
 
-## 六、编码风格
+## 六、react-router
+
+React Router 是一个基于React之上的强大路由库，它可以让你向应用中快速地添加视图和数据流，同时保持页面与 URL 间的同步。
+
+React Router 支持的路由方式：
+
+- `BrowserRouter`: 浏览器路由，用于 Web 应用程序。
+- `HashRouter`：在路径前加入`#`成为一个哈希值，Hash 模式的好处是不会因为刷新页面而找不到对应路径；
+- `MemoryRouter`：不存储 history，路由过程保存在内存中，适用于 React Native 这种非浏览器环境；
+- `NativeRouter`：配合 React Native 使用，多用于移动端；
+- `StaticRouter`：主要用于服务端渲染时。
+
+参考：https://reactrouter.com/en/main
+
+### 1.安装
+
+```shell
+npm install react-router-dom@6
+```
+
+### 2.路由配置
+
+客户端路由配置通过`createBrowserRouter`来创建router：
+
+```jsx
+import React from "react";
+import { createRoot } from "react-dom/client";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Route,
+  Link,
+} from "react-router-dom";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <div>
+        <h1>Hello World</h1>
+        <Link to="about">About Us</Link>
+      </div>
+    ),
+  },
+  {
+    path: "about",
+    element: <div>About</div>,
+  },
+]);
+
+createRoot(document.getElementById("root")).render(
+  <RouterProvider router={router} />
+);
+```
+
+#### 数组式配置
+
+```jsx
+// Or use plain objects
+createBrowserRouter([
+  {
+    path: "/",
+    element: <Root />,
+    children: [
+      {
+        path: "contact",
+        element: <Contact />,
+      },
+      {
+        path: "dashboard",
+        element: <Dashboard />,
+        loader: ({ request }) =>
+          fetch("/api/dashboard.json", {
+            signal: request.signal,
+          }),
+      },
+      {
+        element: <AuthLayout />,
+        children: [
+          {
+            path: "login",
+            element: <Login />,
+            loader: redirectIfUser,
+          },
+          {
+            path: "logout",
+            action: logoutUser,
+          },
+        ],
+      },
+    ],
+  },
+]);
+```
+
+
+
+#### JSX标签式配置
+
+```jsx
+// Configure nested routes with JSX
+createBrowserRouter(
+  createRoutesFromElements(
+    <Route path="/" element={<Root />}>
+      <Route path="contact" element={<Contact />} />
+      <Route
+        path="dashboard"
+        element={<Dashboard />}
+        loader={({ request }) =>
+          fetch("/api/dashboard.json", {
+            signal: request.signal,
+          })
+        }
+      />
+      <Route element={<AuthLayout />}>
+        <Route
+          path="login"
+          element={<Login />}
+          loader={redirectIfUser}
+        />
+        <Route path="logout" />
+      </Route>
+    </Route>
+  )
+);
+```
+
+#### 相对路径链接
+
+假设router结构如下：
+
+```jsx
+<Route path="home" element={<Home />}>
+  <Route path="project/:projectId" element={<Project />}>
+    <Route path=":taskId" element={<Task />} />
+  </Route>
+</Route>
+```
+
+那么在`Project`组件里使用相对路可以实现URL跳转：
+
+| In `<Project>` @ `/home/project/123` | Resolved `<a href>`     |
+| ------------------------------------ | ----------------------- |
+| `<Link to="abc">`                    | `/home/project/123/abc` |
+| `<Link to=".">`                      | `/home/project/123`     |
+| `<Link to="..">`                     | `/home`                 |
+| `<Link to=".." relative="path">`     | `/home/project`         |
+
+
+
+### 3.Route
+
+Route用于绑定URL到UI组件，是创建路由器方法的参数。Route可以是对象也可以通过jsx声明。Route的类型定义如下：
+
+```ts
+interface RouteObject {
+  path?: string;
+  index?: boolean;
+  children?: React.ReactNode;
+  caseSensitive?: boolean;
+  id?: string;
+  loader?: LoaderFunction;
+  action?: ActionFunction;
+  element?: React.ReactNode | null;
+  Component?: React.ComponentType | null;
+  errorElement?: React.ReactNode | null;
+  ErrorBoundary?: React.ComponentType | null;
+  handle?: RouteObject["handle"];
+  shouldRevalidate?: ShouldRevalidateFunction;
+  lazy?: LazyRouteFunction<RouteObject>;
+}
+```
+
+
+
+### 4.组件
+
+#### Await
+
+用于显示异步延迟加载数据并自动处理异常错误的组件。
+
+#### Form
+
+一个HTML表单包装器。
+
+#### Link
+
+URL跳转链接组件。包装`<a>`元素指向某个URL资源。
+
+#### NavLink
+
+这是一个特殊的Link组件，可以知道当前是否处于`active`状态，是否牌`pending`状态。通常用于构建导航菜单。
+
+#### Navigate
+
+一个包装`useNavigate`的组件，渲染时将当前URL指向`to`属性指定的URL。
+
+#### Outlet
+
+用于父route的element组件中，在显示子route组件的同时显示父route的element组件。如导航菜单布局中，左边显示菜单右边显示内容。
+
+
+
+#### ScrollRestoration
+
+在数据加载完成后，此组件将在位置更改时模拟浏览器的滚动还原，以确保滚动位置恢复到正确的位置，即使跨域也是如此。
+
+### 5.hooks
+
+`react-router-dom`包提供了很多不同的hooks。以下是一些常用的hooks：
+
+#### useParams
+
+`useParams`返回的是一个键/值对对象，键/值对与URL动态传参的参数一一对应。如：路由配置`<Route path='task/:param1/:param2' element={<Task/>}/>`,对应在`Task`组件里使用`let {param1, param2} = useParams();`就可以获取到URL传入的参数param1和param2。子路由从其父路由继承所有参数。
+
+```jsx
+import * as React from 'react';
+import { Routes, Route, useParams } from 'react-router-dom';
+
+function ProfilePage() {
+  // Get the userId param from the URL.
+  let { userId } = useParams();
+  // ...
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="users">
+        <Route path=":userId" element={<ProfilePage />} />
+        <Route path="me" element={...} />
+      </Route>
+    </Routes>
+  );
+}
+```
+
+
+
+#### useNavigation
+
+
+
+
+
+### 6.实用工具
+
+`react-router-dom`包提供了很多不同的utilities。以下是一些常用的utilities：
+
+#### redirect
 
 
 
@@ -1795,7 +2044,17 @@ export default function App() {
 
 
 
-## 七、react-router
+
+
+
+
+
+
+## 七、编码风格
+
+
+
+
 
 
 
