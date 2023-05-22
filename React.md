@@ -2212,5 +2212,3 @@ class Timer extends React.Component {
 
 
 
-
-https://cn.mobx.js.org
