@@ -1779,15 +1779,7 @@ export default function App() {
 
 
 
-## 五、Mobx
-
-
-
-
-
-
-
-## 六、react-router
+## 五、react-router
 
 React Router 是一个基于React之上的强大路由库，它可以让你向应用中快速地添加视图和数据流，同时保持页面与 URL 间的同步。
 
@@ -2028,7 +2020,38 @@ function App() {
 
 #### useNavigation
 
+`useNavigation`hook可以获取页面所有的navigation信息，可用于构建页面跳转pending指示或乐观UI。
 
+`useNavigation`返回一个对象，对象有5个属性：
+
+```jsx
+import { useNavigation } from "react-router-dom";
+
+function SomeComponent() {
+  const navigation = useNavigation();
+  navigation.state;
+  navigation.location;
+  navigation.formData;
+  navigation.formAction;
+  navigation.formMethod;
+}
+```
+
+**state: 'idle'|'submitting'|'loading'**
+
+页面navigation状态，字符串状态字。
+
+* `idle`
+
+  没有navigation事件处于pending状态
+
+* `submitting`
+
+  表单提交触发路由变更
+
+* `loading`
+
+  下个页面的数据加载器执行中
 
 
 
@@ -2038,15 +2061,145 @@ function App() {
 
 #### redirect
 
+在`Route`的`loader`或`action`中返回一个`redirect`重定向到另一个route。
+
+```jsx
+import { redirect } from "react-router-dom";
+
+const loader = async () => {
+  const user = await getUser();
+  if (!user) {
+    return redirect("/login");
+  }
+  return null;
+};
+```
 
 
 
+## 六、Mobx
+
+参考：https://www.mobxjs.com
+
+Mobx是一个身经百战的状态管理库，可以让你的应用状态管理变得轻松和可扩展。
+
+![](images/mobx-concept.jpeg)
 
 
 
+### 1.安装
 
+```shell
+npm install --save mobx
+```
 
+注意：在使用Typescript和babel并且打算走class编码风格的项目中，需要做以下配置：
 
+* `Typescript`
+
+  在`tsconfig.json`中的`compilerOptions`添加：
+
+  ```json
+  "useDefineForClassFields": true
+  ```
+
+  
+
+* `Babel`
+
+  添加以下babel插件配置：
+
+  ```json
+  {
+      // Babel < 7.13.0
+      "plugins": [["@babel/plugin-proposal-class-properties", { "loose": false }]],
+      
+      // Babel >= 7.13.0 (https://babeljs.io/docs/en/assumptions)
+      "plugins": [
+        [
+          "@babel/plugin-proposal-class-properties"
+        ],
+        [
+          "@babel/plugin-proposal-private-methods"
+        ],
+        [
+          "@babel/plugin-proposal-private-property-in-object"
+        ],
+        [
+          "@babel/plugin-proposal-decorators",
+          {
+            "legacy": true
+          }
+        ]
+      ],
+      "assumptions": {
+        "setPublicClassFields": false
+      }
+  }
+  ```
+
+* 在代码入口（如：`index.tsx`）添加验证脚本
+
+  ```tsx
+  if (!new class { x:any }().hasOwnProperty('x')) throw new Error('Transpiler is not configured correctly');
+  ```
+
+  
+
+### 2.mobx装饰器
+
+在版本6之前，Mobx鼓励使用ES.next中的decorators,将某个对象标记为`observable`, `computed` 和 `action`。我们在MobX 6中放弃了它们，并建议使用`makeObservable` / `makeAutoObservable`代替。鉴于目前仍有很多代码库，在线文档和教程在使用decorator，我们的规则是，任何可以使用`observable`, `action` 和 `computed`等注解的地方，你也可以使用decorator。
+
+* `@observable`
+
+* `@action`
+
+* `@computed`
+
+* `@observer`
+
+版本6之前的Mobx,不需要在构造函数中调用`makeObservable(this)`。在版本6中，为了让装饰器的实现更简单以及保证装饰器的兼容性，必须在构造函数中调用`makeObservable(this)`。Mobx可以根据 `makeObservable`第二个参数提供的装饰器信息，将实例设置为observable。
+
+```tsx
+import { makeObservable, observable, computed, action } from "mobx"
+
+class Todo {
+    id = Math.random()
+    @observable title = ""
+    @observable finished = false
+
+    constructor() {
+        makeObservable(this)
+    }
+
+    @action
+    toggle() {
+        this.finished = !this.finished
+    }
+}
+
+class TodoList {
+    @observable todos = []
+
+    @computed
+    get unfinishedTodoCount() {
+        return this.todos.filter(todo => !todo.finished).length
+    }
+
+    constructor() {
+        makeObservable(this)
+    }
+}
+```
+
+`mobx-react`中的`observer`除了可以作为函数来使用，也可以作为装饰器，用来修饰类组件:
+
+```tsx
+@observer
+class Timer extends React.Component {
+    /* ... */
+}
+```
 
 
 
