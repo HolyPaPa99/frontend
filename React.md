@@ -2146,7 +2146,117 @@ npm install --save mobx
 
   
 
-### 2.mobx装饰器
+### 2.可观察状态
+
+属性，完整的对象，数组，Maps 和 Sets 都可以被转化为可观察对象。 使得对象可观察的基本方法是使用 `makeObservable` 为每个属性指定一个注解。在6版本以前使用装饰器，6之后推荐使用makeObservable:
+
+```js
+makeObservable(target, annotations?, options?)
+```
+
+可用注解如下：
+
+| 注解                           | 描述                                                         |
+| ------------------------------ | ------------------------------------------------------------ |
+| `observable` `observable.deep` | 定义一个存储 state 的可跟踪字段。如果可能，任何被赋值给 `observable` 的字段都会基于它自己的类型被（深度）转化为`observable`、`autoAction` 或 `flow`。只有 `plain object`、`array`、`Map`、`Set`、`function`、`generator function` 可以转换，类实例和其他实例不会被影响。 |
+| `observable.ref`               | 类似于 `observable`，但只有重新赋值才会被追踪。所赋的值会被完全忽略，并且将不会主动转化为 `observable`/`autoAction`/`flow`。比方说，在你打算将不可变数据存储在可观察字段中时，可以使用这个注解。 |
+| `observable.shallow`           | 类似于 `observable.ref` 但是是用于集合的。任何所赋的集合都会被转化为可观察值，但是其内部的值并不会变为可观察值。 |
+| `observable.struct`            | 类似于 `observable`，但是会忽略所赋的值中所有在结构上与当前值相同的值。 |
+| `action`                       | 把一个函数标记为会修改 state 的 action。查看 [actions](https://www.mobxjs.com/actions) 获取更多信息。不可写。 |
+| `action.bound`                 | 类似于 action，但是会将 action 绑定到实例，因此将始终设置 `this`。不可写。 |
+| `computed`                     | 可以用在 [getter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get) 上，用来将其声明为可缓存的派生值。查看 [computeds](https://www.mobxjs.com/computeds) 获取更多信息。 |
+| `computed.struct`              | 类似于 `computed`，但如果重新计算后的结果在结构上与之前的结果相等，那么观察者将不会收到通知。 |
+| `true`                         | 推断最佳注解。查看 [makeAutoObservable](https://www.mobxjs.com/observable-state#makeautoobservable) 获取更多信息。 |
+| `false`                        | 刻意不为该属性指定注解。                                     |
+| `flow`                         | 创建一个 `flow` 管理异步进程。查看 [flow](https://www.mobxjs.com/actions#使用-flow-代替-async--await-) 获取更多信息。需要注意的是，推断出来的 TypeScript 返回类型可能会出错。 不可写。 |
+| `flow.bound`                   | 类似于 flow, 但是会将 flow 绑定到实例，因此将始终设置 `this`。 不可写。 |
+| `override`                     | [用于子类覆盖继承的 `action`，`flow`，`computed`，`action.bound`](https://www.mobxjs.com/subclassing)。 |
+| `autoAction`                   | 不应被显式调用，但 `makeAutoObservable` 内部会对其进行调用，以便根据调用上下文将方法标识为 action 或者派生值。 |
+
+可选的 `options` 参数，该参数是一个对象，支持以下选项：
+
+- **`autoBind: true`** 默认使用 `action.bound`/`flow.bound`，而不使用 `action`/`flow`。不影响被显式注释过的成员。
+- **`deep: false`** 默认使用 `observable.ref`，而不使用 `observable`。不影响被显式注释过的成员。
+- **`name: <string>`** 为对象提供一个调试名称，该名称将被打印在错误消息和 reflection API 中。
+- **`proxy: false`** 迫使 `observable(thing)` 使用非 **proxy** 的实现。如果对象的结构不会随着时间变化，那么这就是一个很好的选择，因为非代理对象更容易调试并且速度更快。
+
+```js
+import { makeObservable, observable, computed, action, flow } from "mobx"
+
+class Doubler {
+    value
+
+    constructor(value) {
+        makeObservable(this, {
+            value: observable,
+            double: computed,
+            increment: action,
+            fetch: flow
+        })
+        this.value = value
+    }
+
+    get double() {
+        return this.value * 2
+    }
+
+    increment() {
+        this.value++
+    }
+
+    *fetch() {
+        const response = yield fetch("/api/value")
+        this.value = response.json()
+    }
+}
+```
+
+
+
+```js
+makeAutoObservable(target, overrides?, options?)
+```
+
+`makeAutoObservable` 就像是加强版的 `makeObservable`，在默认情况下它将推断所有的属性。你仍然可以使用 `overrides` 重写某些注解的默认行为。
+
+```js
+observable(source, overrides?, options?)
+```
+
+`observable` 注解可以作为一个函数进行调用，从而一次性将整个对象变成可观察的。
+
+```js
+import { observable, autorun } from "mobx"
+
+const todos = observable([
+    { title: "Spoil tea", completed: true },
+    { title: "Make coffee", completed: false }
+])
+
+autorun(() => {
+    console.log(
+        "Remaining:",
+        todos
+            .filter(todo => !todo.completed)
+            .map(todo => todo.title)
+            .join(", ")
+    )
+})
+// 打印: 'Remaining: Make coffee'
+
+todos[0].completed = false
+// 打印: 'Remaining: Spoil tea, Make coffee'
+
+todos[2] = { title: "Take a nap", completed: false }
+// 打印: 'Remaining: Spoil tea, Make coffee, Take a nap'
+
+todos.shift()
+// 打印: 'Remaining: Make coffee, Take a nap'
+```
+
+
+
+### 3.mobx装饰器
 
 在版本6之前，Mobx鼓励使用ES.next中的decorators,将某个对象标记为`observable`, `computed` 和 `action`。我们在MobX 6中放弃了它们，并建议使用`makeObservable` / `makeAutoObservable`代替。鉴于目前仍有很多代码库，在线文档和教程在使用decorator，我们的规则是，任何可以使用`observable`, `action` 和 `computed`等注解的地方，你也可以使用decorator。
 
@@ -2203,8 +2313,132 @@ class Timer extends React.Component {
 
 
 
-## 七、编码风格
+### 4.mobx-react
 
+安装
+
+```shell
+npm install mobx-react --save
+```
+
+#### `observer`
+
+observer函数将react组件（类组件或`stand-alone`render函数组件）转换成mobx响应式组件，会自动响应组件中使用observable状态的更新而重新渲染。
+
+```jsx
+import { observer } from "mobx-react"
+
+// ---- ES6 syntax ----
+const TodoView = observer(
+    class TodoView extends React.Component {
+        render() {
+            return <div>{this.props.todo.title}</div>
+        }
+    }
+)
+
+// ---- ESNext syntax with decorator syntax enabled ----
+@observer
+class TodoView extends React.Component {
+    render() {
+        return <div>{this.props.todo.title}</div>
+    }
+}
+
+// ---- or just use function components: ----
+const TodoView = observer(({ todo }) => <div>{todo.title}</div>)
+```
+
+
+
+#### `Provider`和`inject `
+
+`Provider`将stores通过react的context机制传递给子组件，而`inject`装饰器则是将provider中的store注入子组件。
+
+```jsx
+@inject("color")
+@observer
+class Button extends React.Component {
+    render() {
+        return <button style={{ background: this.props.color }}>{this.props.children}</button>
+    }
+}
+
+class Message extends React.Component {
+    render() {
+        return (
+            <div>
+                {this.props.text} <Button>Delete</Button>
+            </div>
+        )
+    }
+}
+
+class MessageList extends React.Component {
+    render() {
+        const children = this.props.messages.map(message => <Message text={message.text} />)
+        return (
+            <Provider color="red">
+                <div>{children}</div>
+            </Provider>
+        )
+    }
+}
+```
+
+`inject`的函数式用法：
+
+```jsx
+var Button = inject("color")(
+    observer(
+        class Button extends Component {
+            /* ... etc ... */
+        }
+    )
+)
+```
+
+#### `disposeOnUnmount(componentInstance, propertyKey | function | function[])`
+
+该装饰器装饰的类方法或方法数组将在组件生命周期`componentWillUnmount`事件中执行。
+
+```jsx
+import React from "react";
+import {disposeOnUnmount} from 'mobx-react'
+
+export default class Page2 extends React.Component {
+
+    @disposeOnUnmount
+    someDisposer1 = ()=>{console.log("page2 will unmount1.")}
+
+    @disposeOnUnmount
+    someDisposer = [
+        ()=>{console.log("page2 will unmount.")}
+    ]
+
+    render() {
+        return (
+            <div>
+                Hello, Page2!
+            </div>
+        )
+    }
+}
+```
+
+
+
+## 七、react-intl
+
+
+
+
+
+
+
+
+
+## 八、编码风格
 
 
 
