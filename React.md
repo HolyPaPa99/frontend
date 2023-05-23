@@ -2587,7 +2587,45 @@ export default ContenIntl;
 
 ## 八、axios
 
+axios是一个基于promise的网络请求库。
 
+### 1.安装
+
+```shell
+npm install --save axios
+```
+
+### 2.Axios Api
+
+
+
+
+
+### 3.请求配置
+
+
+
+
+
+### 4.响应
+
+
+
+
+
+### 5.请求拦截器
+
+
+
+
+
+### 6.错误处理
+
+
+
+
+
+### 7.取消请求
 
 
 
