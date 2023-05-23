@@ -2430,6 +2430,162 @@ export default class Page2 extends React.Component {
 
 ## 七、react-intl
 
+参考：https://formatjs.io/docs/getting-started/installation
+
+### 1.安装
+
+```shell
+npm i --save react-intl
+```
+
+### 2.多语言映射配置
+
+```ts
+//en_US.ts
+const en_US = {
+    "menu" : "Menu",
+    "hello" : "Hello
+}
+export {
+    en_US
+}   
+```
+
+```ts
+//zh_CN.ts
+const zh_CN = {
+    "menu" : "菜单",
+    "hello" : "你好
+}
+export {
+    zh_CN
+}   
+
+```
+
+```ts
+//lang/index.ts
+//合并
+import zh from './zh_CN';
+import en from './en_US';
+
+const message: {[propName: string]: any} = {
+  zh: zh,
+  en: en,
+};
+export default message;
+```
+
+
+
+### 3.国际化全局容器`IntlProvider`
+
+`IntlProvider`是一个全局国际化映射容器，为下级组件提供国际化映射。这里使用装饰器函数的写法，并注入mobx状态store来控制本地化语言切换。
+
+```tsx
+import React from 'react';
+import {IntlProvider} from 'react-intl';
+import message from './lang/index';
+import {inject, observer} from 'mobx-react';
+
+export function withIntl(WrappedComponent: React.ComponentType) {
+  return inject('userStore')(
+    observer(
+      class extends React.Component<any> {
+        render() {
+          return (
+            <IntlProvider
+              locale={this.props.userStore.language}
+              messages={message[this.props.userStore.language]}>
+              <WrappedComponent />
+            </IntlProvider>
+          );
+        }
+      },
+    ),
+  );
+}
+```
+
+
+
+### 4.国际化组件
+
+用 `<FormattedMessage/> `代替字符串在组件中的位置，并配置相关组件属性。
+
+```tsx
+import React from 'react';
+import { FormattedMessage } from 'react-intl';
+
+class Content extends React.Component {
+    constructor(props) {
+            super(props);
+            this.state = {};
+    }
+    render() {
+        return (
+            <div>
+                <FormattedMessage id="hello" />
+            </div>
+        );
+    }
+}
+
+export default Content;
+```
+
+此时，`<FormattedMessage id="hello" />` 会根据id和外层的 `<IntlProvider>`组件的locale和message寻找当前语言对应id的字符串，也就是‘你好’。
+
+### 5.国际化函数
+
+用injectIntl()处理组件，向组件注入intl对象，intl的intl.formatMessage可以实现替代国际化字符串。
+
+```tsx
+import React from 'react';
+import { injectIntl } from 'react-intl';
+
+class Content extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+        };
+    }
+    render() {
+        const { intl } = props
+        return (
+            <div>
+                {
+                    intl.formatMessage({ id : hello})
+                }
+            </div>
+        );
+    }
+}
+const ContenIntl = injectIntl(Content)
+export default ContenIntl;
+```
+
+
+
+### 6.复杂字符串国际化
+
+除了上述的简单固定字符串国际化外，还支持带变量的复杂字符串的格式化，这是基于 **ICU Message Syntax**实现的。格式为`{key, type, format}`。
+
+```js
+"Hello, {name}, you have {itemCount, plural,
+    =0 {no items}
+    one {# item}
+    other {# items}
+}."
+```
+
+`itemCount`是变量名也就是key，plural为类型，后面那一串是不同情况下的输出格式。
+
+关于 **ICU Message Syntax**所支持的类型和输出出格式详细请参考：https://formatjs.io/docs/core-concepts/icu-syntax/
+
+
+
+## 八、axios
 
 
 
@@ -2438,11 +2594,10 @@ export default class Page2 extends React.Component {
 
 
 
-## 八、编码风格
 
+## 九、前端架构
 
+基于react和mobx整理了一套前端架构，基础项目搭建上传在：https://github.com/HolyPaPa99/react-typescript
 
-
-
-
+![](images/react-mobx-framework.jpg)
 
