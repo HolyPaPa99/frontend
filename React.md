@@ -2987,3 +2987,43 @@ const instance = axios.create({
 ![](images/react-mobx-framework.jpg)
 
 对于编码风格，现在主流的编码风格主要有函数式和类声明式。因为我后端是java面向对象深入骨髓，所以我选择类声明式的编程风格。采用Typescript类型声明式语法，状态管理方面使用mobx构建MVVM架构，相对于redux的mvc模式代码简化、可读性高。有人说react推荐的是函数式编程，我个人认为别人用的并不一定是最好的，适合自己的才好。
+
+
+
+## 十、ESLint
+
+官网：https://eslint.org
+
+配置`ESLint`:
+
+```shell
+npm init @eslint/config
+```
+
+检查并自动修复:
+
+```shell
+npx eslint ./src --fix
+```
+
+自定义规则：
+
+```json
+{
+  "rules":{
+    // 使用 "off", "warn", "error"
+    "no-console": "warn",
+    // 使用数字（不推荐，语义不明确）
+    "for-direction": 1,
+    // 数组语法，但没有额外配置项
+    "no-else-return": ["error"],
+    // 数组语法，一个配置项
+    "eqeqeq":["error","always"],
+    // 数组语法，多个配置项
+    "quotes": ["error", "double", { "avoidEscape": true }]
+  }
+}
+```
+
+
+
