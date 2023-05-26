@@ -838,7 +838,7 @@ $gutter-width: 10px;
 
 ```shell
 # 安装 Webpack Loader 依赖
-npm i -D  sass-loader css-loader style-loader
+npm i -D  sass-loader sass css-loader style-loader
 ```
 
 配置webpack加载器：
@@ -860,9 +860,91 @@ module.exports = {
 
 
 
+**css-样式污染**
 
+如果组件之间选择器重复，那么一个组件中的样式就会在另一个组件中也生效，从而造成组件之间样式相互覆盖的问题。
 
+**css module**
 
+使用css module可以解决这一问题。CSS Module 的规则非常简单，所有你不指明是全局作用域的都会当初局部作用域来处理。
+
+```scss
+//index.module.scss
+.ul {
+    li {
+        list-style: none
+    }
+}
+```
+
+```tsx
+import React from 'react'
+import { Outlet } from 'react-router';
+import { Link } from 'react-router-dom';
+import styles from './index.module.scss';
+
+class Home extends React.Component {
+
+    render() {
+        return (
+            <div style={{ display: 'flex' }}>
+                <div style={{ marginRight: '20px' }}>
+                    <h1>Hello, World!</h1>
+                    <hr />
+                    <ul className={styles.ul}>
+                        <li>
+                            <Link to="/">Home</Link>
+                        </li>
+                        <li>
+                            <Link to="page1/1/2">Page1</Link>
+                        </li>
+                        <li>
+                            <Link to="page2">Page2</Link>
+                        </li>
+                    </ul>
+                </div>
+                <Outlet />
+            </div>
+        );
+    }
+}
+
+export default Home;
+```
+
+![](images/scss-module-example.png)
+
+webpack配置： 
+
+```js
+ {
+     test: /\.module.scss$/i,
+     use: [
+         {
+             loader: "style-loader",
+         },
+         {
+             loader: "css-loader",
+             options: {
+                 importLoaders: 1,
+                 modules: {
+                     mode: "local",
+                 },
+             },
+         },
+         {
+             loader: "sass-loader",
+         },
+     ],
+ },
+```
+
+如果使用Typescript，则需要为scss文件添加类型声明文件`*.d.ts`：
+
+```ts
+//custom.d.ts文件
+declare module "*.module.scss";
+```
 
 
 
