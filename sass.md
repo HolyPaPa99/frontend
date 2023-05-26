@@ -948,6 +948,22 @@ declare module "*.module.scss";
 
 
 
+SS Modules分局部作用域和全局作用域。
+
+两者的区分是通过`:local()` 与`:global()`来设定的。因为CSS Module默认的是局部作用域，所以 `:local()`默认省略。CSS Modules 使用`:global(.className)`的语法，声明一个全局规则。凡是这样声明的class，都不会被编译成哈希字符串，使用全局样式时直接赋值给class就行了，不需要进行类绑定。
+
+```scss
+:global {
+  .output {
+      background: #fff;
+      height: 100%;
+      min-height: 100%;
+      padding: 1em;
+      word-break: break-all;
+  }
+}
+```
+
 
 
 
