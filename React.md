@@ -2398,6 +2398,37 @@ var Button = inject("color")(
 )
 ```
 
+和React hooks搭配使用：
+
+```jsx
+import { MobXProviderContext } from 'mobx-react'
+function useStores() {
+  return React.useContext(MobXProviderContext)
+}
+```
+
+```jsx
+function useUserData() {
+  const { user, order } = useStores()
+  return {
+    username: user.name,
+    orderId: order.id,
+  }
+}
+
+const UserOrderInfo = observer(() => {
+  // Do not destructure data!
+  const data = useUserData()
+  return (
+    <div>
+      {data.username} has order {data.orderId}
+    </div>
+  )
+})
+```
+
+
+
 #### `disposeOnUnmount(componentInstance, propertyKey | function | function[])`
 
 该装饰器装饰的类方法或方法数组将在组件生命周期`componentWillUnmount`事件中执行。
@@ -3027,3 +3058,349 @@ npx eslint ./src --fix
 
 
 
+## 十一、Jest
+
+官网：https://jestjs.io
+
+### 1.安装
+
+```shell
+##安装jest
+npm i -g jest
+```
+
+```shell
+##初始化jest，生成配置文件
+jest --init
+```
+
+如果不使用命令行指令可以跳过。
+
+### 2.配置jest
+
+```shell
+##支持babel typescript
+npm install --save-dev jest babel-jest @babel/core @babel/preset-env @babel/preset-typescript @types/jest
+```
+
+```shell
+##支持react
+npm install --save-dev @babel/preset-react react-test-renderer @testing-library/react @testing-library/jest-dom @types/react-test-renderer
+```
+
+如果项目中使用css module则需要在jest.config.ts配置文件中的moduleNameMapper`添css module支持：
+
+```ts
+moduleNameMapper: {
+    "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy"
+},
+```
+
+
+
+### 3.Jest Api
+
+![](images/jest.png)
+
+jestApi主要分为8个部分：
+
+* before
+
+  `beforeAll(fn, timeout)` 文件内所有测试开始前执行的钩子函数。
+
+  ```js
+  const globalDatabase = makeGlobalDatabase();
+  
+  beforeAll(() => {
+    // 清空数据库并添加几条数据
+    // Jest 会等待 promise resolve 再去执行测试
+    return globalDatabase.clear().then(() => {
+    return globalDatabase.insert({testData: 'foo'});
+    });
+  });
+  
+  // 因为我们在开始前设置了一个全局共享的数据库
+  // 所以我们测试时不能修改数据库的数据
+  test('can find things', () => {
+    return globalDatabase.find('thing', {}, results => {
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
+  ```
+
+  
+
+  `beforeEach(fn, timeout)` 文件内每个测试开始前执行的钩子函数。
+
+  ```js
+  const globalDatabase = makeGlobalDatabase();
+  
+  beforeEach(() => {
+    // Clears the database and adds some testing data.
+    // Jest 会等待 promise resolve 再去执行测试
+    return globalDatabase.clear().then(() => {
+      return globalDatabase.insert({testData: 'foo'});
+    });
+  });
+  
+  test('can find things', () => {
+    return globalDatabase.find('thing', {}, results => {
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
+  
+  test('can insert a thing', () => {
+    return globalDatabase.insert('thing', makeThing(), response => {
+      expect(response.success).toBeTruthy();
+    });
+  });
+  ```
+
+  
+
+* after
+
+  `afterAll(fn, timeout)` 文件内所有测试完成后执行的钩子函数。
+
+  ```js
+  const globalDatabase = makeGlobalDatabase();
+  
+  function cleanUpDatabase(db) {
+    db.cleanUp();
+  }
+  
+  afterAll(() => {
+    cleanUpDatabase(globalDatabase);
+  });
+  
+  test('can find things', () => {
+    return globalDatabase.find('thing', {}, results => {
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
+  
+  test('can insert a thing', () => {
+    return globalDatabase.insert('thing', makeThing(), response => {
+      expect(response.success).toBeTruthy();
+    });
+  });
+  ```
+
+  
+
+  `afterEach(fn, timeout)` 文件内每个测试完成后执行的钩子函数。
+
+  ```js
+  const globalDatabase = makeGlobalDatabase();
+  
+  function cleanUpDatabase(db) {
+    db.cleanUp();
+  }
+  
+  afterEach(() => {
+    cleanUpDatabase(globalDatabase);
+  });
+  
+  test('can find things', () => {
+    return globalDatabase.find('thing', {}, results => {
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
+  
+  test('can insert a thing', () => {
+    return globalDatabase.insert('thing', makeThing(), response => {
+      expect(response.success).toBeTruthy();
+    });
+  });
+  ```
+
+  
+
+* test/it
+
+  `test(name, fn, timeout)`是将运行测试的方法。别名：`it(name, fn, timeout)`。
+
+  ```js
+  test('did not rain', () => {
+    expect(inchesOfRain()).toBe(0);
+  });
+  ```
+
+  
+
+* describe
+
+  `describe(name, fn)` 是一个将多个相关的测试组合在一起的块。注意：这不是强制的，你甚至可以直接把 `test` 块直接写在最外层。 但是如果你习惯按组编写测试，使用 `describe` 包裹相关测试用例更加友好。
+
+  ```js
+  const binaryStringToNumber = binString => {
+    if (!/^[01]+$/.test(binString)) {
+      throw new CustomError('Not a binary number.');
+    }
+  
+    return parseInt(binString, 2);
+  };
+  
+  describe('binaryStringToNumber', () => {
+    describe('given an invalid binary string', () => {
+      test('composed of non-numbers throws CustomError', () => {
+        expect(() => binaryStringToNumber('abc')).toThrow(CustomError);
+      });
+  
+      test('with extra whitespace throws CustomError', () => {
+        expect(() => binaryStringToNumber('  100')).toThrow(CustomError);
+      });
+    });
+  
+    describe('given a valid binary string', () => {
+      test('returns the correct number', () => {
+        expect(binaryStringToNumber('100')).toBe(4);
+      });
+    });
+  });
+  ```
+
+  
+
+* expect
+
+  `expect(value)`断言，判断一个值是否满足条件。通常会结合`expect` 和匹配器函数来断言某个值。
+
+  ```js
+  test('the best flavor is grapefruit', () => {
+    expect(bestLaCroixFlavor()).toBe('grapefruit');
+  });
+  ```
+
+  `expect`断言提供了不同的修饰语和匹配器来判断测试结果是否符合预期。
+
+* mock
+
+  Jest 中有三个与 Mock函数相关的API，分别是jest.fn()、jest.spyOn()、jest.mock()。
+
+  Mock函数提供的以下三种特性:捕获函数调用情况、设置函数返回值、改变函数的内部实现。
+
+  通过 `jest.fn(implementation?)` 创建 mock 函数。 如果没有提供实现，调用模拟函数将返回 `undefined`。
+
+  ```js
+  test('测试jest.fn()调用', () => {
+    let mockFn = jest.fn();
+    let result = mockFn(1, 2, 3);
+  
+    // 断言mockFn的执行后返回undefined
+    expect(result).toBeUndefined();
+    // 断言mockFn被调用
+    expect(mockFn).toBeCalled();
+    // 断言mockFn被调用了一次
+    expect(mockFn).toBeCalledTimes(1);
+    // 断言mockFn传入的参数为1, 2, 3
+    expect(mockFn).toHaveBeenCalledWith(1, 2, 3);
+  })
+  
+  ```
+
+  `jest.mock(moduleName, factory, options)`用于mock一个模块。
+
+  ```js
+  jest.mock(
+    '../moduleName',
+    () => {
+      /*
+       * Custom implementation of a module that doesn't exist in JS,
+       * like a generated module or a native module in react-native.
+       */
+    },
+    {virtual: true},
+  );
+  ```
+
+  
+
+  ```js
+  // functions.test.js
+  
+  import events from '../src/events';
+  import fetch from '../src/fetch';
+  
+  jest.mock('../src/fetch.js');
+  
+  test('mock 整个 fetch.js模块', async () => {
+    expect.assertions(2);
+    await events.getPostList();
+    expect(fetch.fetchPostsList).toHaveBeenCalled();
+    expect(fetch.fetchPostsList).toHaveBeenCalledTimes(1);
+  });
+  
+  ```
+
+  `jest.spyOn(object, methodName)`创建一个mock函数与`jest.fn`类似，但是该mock函数不仅能够捕获函数的调用情况，还可以正常的执行被spy的函数。
+
+  ```js
+  const video = require('./video');
+  
+  afterEach(() => {
+    // restore the spy created with spyOn
+    jest.restoreAllMocks();
+  });
+  
+  test('plays video', () => {
+    const spy = jest.spyOn(video, 'play');
+    const isPlaying = video.play();
+  
+    expect(spy).toHaveBeenCalled();
+    expect(isPlaying).toBe(true);
+  });
+  ```
+
+  
+
+* configurations
+
+  Jest的理念在默认配置就能运行得很好，但有些时候我们还是需要发挥配置的功效。为了方便对配置进行维护，建议在一个专用的Javascript、Typescript 或 JSON格式的配置文件中定义配置。
+
+  
+
+* cli
+
+  `jest` 命令行运行有很多好用的选项。 你可以运行`jest --help`命令查看所有可用的选项。 
+
+  
+
+### 4.快照
+
+每当你想要确保你的UI不会有意外的改变，快照测试是非常有用的工具。典型的做法是在渲染了UI组件之后，保存一个快照文件， 检测他是否与保存在单元测试旁的快照文件相匹配。 若两个快照不匹配，测试将失败：有可能做了意外的更改，或者UI组件已经更新到了新版本。
+
+```js
+import renderer from 'react-test-renderer';
+import Link from '../Link';
+
+it('changes the class when hovered', () => {
+  const component = renderer.create(
+    <Link page="http://www.facebook.com">Facebook</Link>,
+  );
+  let tree = component.toJSON();
+  expect(tree).toMatchSnapshot();
+
+  // manually trigger the callback
+  renderer.act(() => {
+    tree.props.onMouseEnter();
+  });
+  // re-rendering
+  tree = component.toJSON();
+  expect(tree).toMatchSnapshot();
+
+  // manually trigger the callback
+  renderer.act(() => {
+    tree.props.onMouseLeave();
+  });
+  // re-rendering
+  tree = component.toJSON();
+  expect(tree).toMatchSnapshot();
+});
+```
+
+
+
+## 十二、Web Vitals
+
+参考：https://create-react-app.dev/docs/measuring-performance/
