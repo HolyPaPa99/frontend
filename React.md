@@ -3017,7 +3017,7 @@ const instance = axios.create({
 
 ![](images/react-mobx-framework.jpg)
 
-对于编码风格，现在主流的编码风格主要有函数式和类声明式。因为我后端是java面向对象深入骨髓，所以我选择类声明式的编程风格。采用Typescript类型声明式语法，状态管理方面使用mobx构建MVVM架构，相对于redux的mvc模式代码简化、可读性高。有人说react推荐的是函数式编程，我个人认为别人用的并不一定是最好的，适合自己的才好。
+现在主流的编码风格主要有函数式和类声明式。类声明式的编程风格结合Typescript类型声明式语法，相对于redux的mvc模式代码简化、可读性高。而函数式UI组件开发可以很方便的使用hooks，各有优势。状态管理方面使用mobx构建MVVM架构。
 
 
 
